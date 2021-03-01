@@ -3,9 +3,15 @@ import sys
 import pandas as pd
 import numpy as np
 import pickle
+from src.constants import *
 
-output_folder = 'processed'
-data_folder = 'data'
+def load_and_save(category, filename, dataset, dataset_folder):
+    temp = np.genfromtxt(os.path.join(dataset_folder, category, filename),
+                         dtype=np.float64,
+                         delimiter=',')
+    print(dataset, category, filename, temp.shape)
+    with open(os.path.join(output_folder, f"SMD/{dataset}_{category}.pkl"), "wb") as file:
+        pickle.dump(temp, file)
 
 def load_data(dataset):
 	folder = os.path.join(output_folder, dataset)
@@ -25,6 +31,14 @@ def load_data(dataset):
 		for file in ['train', 'test', 'labels']:
 			with open(os.path.join(folder, f'{file}.pkl'), 'wb') as f:
 				pickle.dump(eval(file), f)
+	elif dataset == 'SMD':
+		dataset_folder = 'data/SMD'
+		file_list = os.listdir(os.path.join(dataset_folder, "train"))
+		for filename in file_list:
+			if filename.endswith('.txt'):
+				load_and_save('train', filename, filename.strip('.txt'), dataset_folder)
+				load_and_save('test', filename, filename.strip('.txt'), dataset_folder)
+				load_and_save('test_label', filename, filename.strip('.txt'), dataset_folder)
 	else:
 		raise Exception('Not Implemented')
 

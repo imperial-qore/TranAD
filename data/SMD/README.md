@@ -1,0 +1,1 @@
+This dataset is taken as is from https://github.com/NetManAIOps/OmniAnomaly

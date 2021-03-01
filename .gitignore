@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 processed/
+plots/
 
 # C extensions
 *.so
