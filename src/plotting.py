@@ -20,7 +20,7 @@ def plotter(name, y_true, y_pred, ascore, labels):
 		y_t, y_p, l, a_s = y_true[:, dim], y_pred[:, dim], labels[:, dim], ascore[:, dim]
 		fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 		ax1.plot(smooth(y_t), label='True')
-		ax1.plot(smooth(y_p), label='Predicted')
+		ax1.plot(smooth(y_p), '-', alpha=0.6, label='Predicted')
 		ax1.plot(l, '--', alpha=0.5)
 		ax1.legend()
 		ax2.plot(smooth(a_s))

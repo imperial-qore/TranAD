@@ -65,13 +65,13 @@ if __name__ == '__main__':
 	### Training phase
 	print(f'Training {args.model} on {args.dataset}')
 	for epoch in range(10):
-		for data in train_loader:
-			lossT, _ = backprop(model, data, optimizer, scheduler)
+		lossT, _ = backprop(model, next(iter(train_loader)), optimizer, scheduler)
 	torch.zero_grad = True
 
 	### Testing phase
 	print(f'Testing {args.model} on {args.dataset}')
-	loss, y_pred = backprop(model, next(iter(test_loader)), optimizer, scheduler, training=False)
+	data = next(iter(test_loader))
+	loss, y_pred = backprop(model, data, optimizer, scheduler, training=False)
 
 	### Plot curves
 	plotter(f'{args.model}_{args.dataset}', data, y_pred, loss, labels)

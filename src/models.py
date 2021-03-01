@@ -40,7 +40,7 @@ class LSTM_Multivariate(nn.Module):
 		self.n_hidden = 64
 		self.lstm = nn.LSTM(feats, self.n_hidden)
 		self.lstm2 = nn.LSTM(self.n_hidden, self.n_hidden)
-		self.fcn = nn.Sequential(nn.Linear(self.n_hidden, self.n_feats), nn.Sigmoid())
+		# self.fcn = nn.Sequential(nn.Linear(self.n_hidden, self.n_feats), nn.Sigmoid())
 
 	def forward(self, x):
 		hidden = (torch.rand(1, 1, self.n_hidden, dtype=torch.float64), torch.randn(1, 1, self.n_hidden, dtype=torch.float64))
@@ -49,8 +49,8 @@ class LSTM_Multivariate(nn.Module):
 		for i, g in enumerate(x):
 			out, hidden = self.lstm(g.view(1, 1, -1), hidden)
 			out, hidden2 = self.lstm2(out.view(1, 1, -1), hidden2)
-			out = self.fcn(out.view(-1))
-			outputs.append(out)
+			# out = self.fcn(out.view(-1))
+			outputs.append(2 * out.view(-1))
 		return torch.stack(outputs)
 
 ## Single LSTM model for all variables + VAE
