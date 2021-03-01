@@ -38,7 +38,7 @@ def load_data(dataset):
 			if filename.endswith('.txt'):
 				load_and_save('train', filename, filename.strip('.txt'), dataset_folder)
 				load_and_save('test', filename, filename.strip('.txt'), dataset_folder)
-				load_and_save('test_label', filename, filename.strip('.txt'), dataset_folder)
+				load_and_save('labels', filename, filename.strip('.txt'), dataset_folder)
 	else:
 		raise Exception('Not Implemented')
 

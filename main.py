@@ -14,15 +14,16 @@ def load_dataset(dataset):
 	folder = os.path.join(output_folder, dataset)
 	if not os.path.exists(folder):
 		raise Exception('Processed Data not found.')
-	if dataset == 'synthetic':
-		loader = []
-		for file in ['train', 'test', 'labels']:
-			with open(os.path.join(folder, f'{file}.pkl'), 'rb') as f:
-				loader.append(pickle.load(f))
-		train_loader = DataLoader(loader[0], batch_size=loader[0].shape[0])
-		test_loader = DataLoader(loader[1], batch_size=loader[1].shape[0])
-		labels = loader[2]
-		return train_loader, test_loader, labels
+	if dataset == 'SMD':
+		folder += 'machine-1-1_'
+	loader = []
+	for file in ['train', 'test', 'labels']:
+		with open(os.path.join(folder, f'{file}.pkl'), 'rb') as f:
+			loader.append(pickle.load(f))
+	train_loader = DataLoader(loader[0], batch_size=loader[0].shape[0])
+	test_loader = DataLoader(loader[1], batch_size=loader[1].shape[0])
+	labels = loader[2]
+	return train_loader, test_loader, labels
 	else:
 		raise Exception('Not Implemented')
 
