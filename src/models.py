@@ -5,35 +5,60 @@ import torch.optim as optim
 import pickle
 torch.manual_seed(1)
 
+
+## Separate LSTM for each variable
+class LSTM_Univariate(nn.Module):
+	def __init__(self, feats):
+		super(LSTM_Univariate, self).__init__()
+		self.name = 'LSTM_Univariate'
+		self.lr = 0.002
+		self.n_feats = feats
+		self.n_hidden = 1
+		self.lstm = nn.ModuleList([nn.LSTM(1, self.n_hidden) for i in range(feats)])
+
+	def forward(self, x):
+		hidden = [(torch.rand(1, 1, self.n_hidden, dtype=torch.float64), 
+			torch.randn(1, 1, self.n_hidden, dtype=torch.float64)) for i in range(self.n_feats)]
+		outputs = []
+		for i, g in enumerate(x):
+			multivariate_output = []
+			for j in range(self.n_feats):
+				univariate_input = g.view(-1)[j].view(1, 1, -1)
+				out, hidden[j] = self.lstm[j](univariate_input, hidden[j])
+				multivariate_output.append(2 * out.view(-1))
+			output = torch.cat(multivariate_output)
+			outputs.append(output)
+		return torch.stack(outputs)
+
+## Single LSTM model for all variables
 class LSTM_Multivariate(nn.Module):
 	def __init__(self, feats):
 		super(LSTM_Multivariate, self).__init__()
 		self.name = 'LSTM_Multivariate'
-		self.lr = 0.005
+		self.lr = 0.002
 		self.n_feats = feats
 		self.n_hidden = 64
 		self.lstm = nn.LSTM(feats, self.n_hidden)
 		self.lstm2 = nn.LSTM(self.n_hidden, self.n_hidden)
-		self.lstm3 = nn.LSTM(self.n_hidden, feats)
+		self.fcn = nn.Sequential(nn.Linear(self.n_hidden, self.n_feats), nn.Sigmoid())
 
 	def forward(self, x):
 		hidden = (torch.rand(1, 1, self.n_hidden, dtype=torch.float64), torch.randn(1, 1, self.n_hidden, dtype=torch.float64))
 		hidden2 = (torch.rand(1, 1, self.n_hidden, dtype=torch.float64), torch.randn(1, 1, self.n_hidden, dtype=torch.float64))
-		hidden3 = (torch.rand(1, 1, self.n_feats, dtype=torch.float64), torch.randn(1, 1, self.n_feats, dtype=torch.float64))
 		outputs = []
 		for i, g in enumerate(x):
 			out, hidden = self.lstm(g.view(1, 1, -1), hidden)
 			out, hidden2 = self.lstm2(out.view(1, 1, -1), hidden2)
-			out, hidden3 = self.lstm3(out.view(1, 1, -1), hidden3)
-			outputs.append(2 * out.view(-1))
+			out = self.fcn(out.view(-1))
+			outputs.append(out)
 		return torch.stack(outputs)
 
-
+## Single LSTM model for all variables + VAE
 class LSTM_VAE(nn.Module):
 	def __init__(self, feats):
 		super(LSTM_VAE, self).__init__()
 		self.name = 'LSTM_VAE'
-		self.lr = 0.005
+		self.lr = 0.002
 		self.beta = 0.01
 		self.n_feats = feats
 		self.n_hidden = 64
@@ -64,7 +89,7 @@ class LSTM_VAE(nn.Module):
 			eps = torch.randn_like(std)
 			x = mu + eps*std if training else mu
 			## Decoder
-			x = 4 * self.decoder(x)
+			x = self.decoder(x)
 			outputs.append(x.view(-1))
 			mus.append(mu.view(-1))
 			logvars.append(logvar.view(-1))
