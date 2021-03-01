@@ -64,21 +64,21 @@ if __name__ == '__main__':
 
 	### Training phase
 	print(f'Training {args.model} on {args.dataset}')
+	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	for epoch in range(10):
-		lossT, _ = backprop(model, next(iter(train_loader)), optimizer, scheduler)
+		lossT, _ = backprop(model, trainD, optimizer, scheduler)
 	torch.zero_grad = True
 
 	### Testing phase
 	print(f'Testing {args.model} on {args.dataset}')
-	data = next(iter(test_loader))
-	loss, y_pred = backprop(model, data, optimizer, scheduler, training=False)
+	loss, y_pred = backprop(model, testD, optimizer, scheduler, training=False)
 
 	### Plot curves
-	plotter(f'{args.model}_{args.dataset}', data, y_pred, loss, labels)
+	plotter(f'{args.model}_{args.dataset}', testD, y_pred, loss, labels)
 
 	### Scores
 	df = pd.DataFrame()
-	lossT, _ = backprop(model, next(iter(train_loader)), optimizer, scheduler, training=False)
+	lossT, _ = backprop(model, trainD, optimizer, scheduler, training=False)
 	for i in range(loss.shape[1]):
 		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
 		result = pot_eval(lt, l, ls[1:])
