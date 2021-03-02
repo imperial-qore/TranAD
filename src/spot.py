@@ -241,6 +241,8 @@ class SPOT:
         """
         if method == 'regular':
             step = (bounds[1] - bounds[0]) / (npoints + 1)
+            ## Bug fix - Shreshth Tuli
+            if step == 0: bounds, step = (0, 1e-4), 1e-5
             X0 = np.arange(bounds[0] + step, bounds[1], step)
         elif method == 'random':
             X0 = np.random.uniform(bounds[0], bounds[1], npoints)

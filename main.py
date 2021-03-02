@@ -113,7 +113,7 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 				ae1s.append(ae1); ae2s.append(ae2); ae2ae1s.append(ae2ae1)
 			ae1s, ae2s, ae2ae1s = torch.stack(ae1s), torch.stack(ae2s), torch.stack(ae2ae1s)
 			y_pred = ae1s[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
-			loss = torch.mean(0.5 * l(ae1s, data) + 0.5 * l(ae2ae1s, data), dim=1).view(-1,1).expand(-1, feats)
+			loss = torch.mean(0.1 * l(ae1s, data) + 0.9 * l(ae2ae1s, data), dim=1).view(-1,1).expand(-1, feats)
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	else:
 		y_pred = model(data)
@@ -140,7 +140,7 @@ if __name__ == '__main__':
 
 	### Training phase
 	print(f'Training {args.model} on {args.dataset}')
-	num_epochs = 5; e = epoch + 1
+	num_epochs = 0; e = epoch + 1
 	for e in range(epoch+1, epoch+num_epochs+1):
 		lossT, lr = backprop(e, model, trainD, optimizer, scheduler)
 		accuracy_list.append((lossT, lr))
@@ -154,7 +154,7 @@ if __name__ == '__main__':
 	loss, y_pred = backprop(0, model, testD, optimizer, scheduler, training=False)
 
 	### Plot curves
-	plotter(f'{args.model}_{args.dataset}', testO, y_pred, loss, labels)
+	# plotter(f'{args.model}_{args.dataset}', testO, y_pred, loss, labels)
 
 	### Scores
 	df = pd.DataFrame()
