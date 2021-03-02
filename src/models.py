@@ -73,27 +73,22 @@ class LSTM_VAE(nn.Module):
 		self.decoder = nn.Sequential(
 			nn.Linear(self.n_latent, self.n_hidden), nn.PReLU(),
 			nn.Linear(self.n_hidden, self.n_hidden), nn.PReLU(),
-			nn.Linear(self.n_hidden, self.n_feats), nn.Tanh(),
+			nn.Linear(self.n_hidden, self.n_feats), nn.Sigmoid(),
 		)
 
-	def forward(self, x):
-		hidden = torch.rand(2, 1, self.n_hidden, dtype=torch.float64)
-		outputs, mus, logvars = [], [], []
-		for i, g in enumerate(x):
-			out, hidden = self.lstm(g.view(1, 1, -1), hidden)
-			## Encode
-			x = self.encoder(out)
-			mu, logvar = torch.split(x, [self.n_latent, self.n_latent], dim=-1)
-			## Reparameterization trick
-			std = torch.exp(0.5*logvar)
-			eps = torch.randn_like(std)
-			x = mu + eps*std
-			## Decoder
-			x = self.decoder(x)
-			outputs.append(x.view(-1))
-			mus.append(mu.view(-1))
-			logvars.append(logvar.view(-1))
-		return torch.stack(outputs), torch.stack(mus), torch.stack(logvars)
+	def forward(self, x, hidden = None):
+		hidden = torch.rand(2, 1, self.n_hidden, dtype=torch.float64) if hidden is not None else hidden
+		out, hidden = self.lstm(x.view(1, 1, -1), hidden)
+		## Encode
+		x = self.encoder(out)
+		mu, logvar = torch.split(x, [self.n_latent, self.n_latent], dim=-1)
+		## Reparameterization trick
+		std = torch.exp(0.5*logvar)
+		eps = torch.randn_like(std)
+		x = mu + eps*std
+		## Decoder
+		x = self.decoder(x)
+		return x.view(-1), mu.view(-1), logvar.view(-1), hidden
 
 ## USAD Model (KDD 20)
 class USAD(nn.Module):
@@ -123,18 +118,13 @@ class USAD(nn.Module):
 			nn.Linear(self.n_hidden, self.n), nn.Sigmoid(),
 		)
 
-	def forward(self, windows):
-		ae1s, ae2s, ae2ae1s = [], [], []
-		for g in windows:
-			## Encode
-			z = self.encoder(g.view(1,-1))
-			## Decoders (Phase 1)
-			ae1 = self.decoder1(z)
-			ae2 = self.decoder2(z)
-			## Encode-Decode (Phase 2)
-			ae2ae1 = self.decoder2(self.encoder(ae1))
-			ae1s.append(ae1.view(-1))
-			ae2s.append(ae2.view(-1))
-			ae2ae1s.append(ae2ae1.view(-1))
-		return torch.stack(ae1s), torch.stack(ae2s), torch.stack(ae2ae1s)
+	def forward(self, g):
+		## Encode
+		z = self.encoder(g.view(1,-1))
+		## Decoders (Phase 1)
+		ae1 = self.decoder1(z)
+		ae2 = self.decoder2(z)
+		## Encode-Decode (Phase 2)
+		ae2ae1 = self.decoder2(self.encoder(ae1))
+		return ae1.view(-1), ae2.view(-1), ae2ae1.view(-1)
 

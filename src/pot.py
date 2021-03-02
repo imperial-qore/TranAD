@@ -42,7 +42,7 @@ def adjust_predicts(score, label,
     label = np.asarray(label)
     latency = 0
     if pred is None:
-        predict = score < threshold
+        predict = score > threshold
     else:
         predict = pred
     actual = label > 0.1
@@ -116,9 +116,9 @@ def pot_eval(init_score, score, label, q=1e-3, level=0.02):
     Run POT method on given score.
     Args:
         init_score (np.ndarray): The data to get init threshold.
-            For `OmniAnomaly`, it should be the anomaly score of train set.
+            it should be the anomaly score of train set.
         score (np.ndarray): The data to run POT method.
-            For `OmniAnomaly`, it should be the anomaly score of test set.
+            it should be the anomaly score of test set.
         label:
         q (float): Detection level (risk)
         level (float): Probability associated with the initial threshold t
@@ -127,11 +127,11 @@ def pot_eval(init_score, score, label, q=1e-3, level=0.02):
     """
     s = SPOT(q)  # SPOT object
     s.fit(init_score, score)  # data import
-    s.initialize(level=level, min_extrema=True, verbose=False)  # initialization step
+    s.initialize(level=0.99995, min_extrema=False, verbose=False)  # initialization step
     ret = s.run(dynamic=False)  # run
     # print(len(ret['alarms']))
     # print(len(ret['thresholds']))
-    pot_th = -np.mean(ret['thresholds'])
+    pot_th = np.mean(ret['thresholds'])
     pred, p_latency = adjust_predicts(score, label, pot_th, calc_latency=True)
     p_t = calc_point2point(pred, label)
     # print('POT result: ', p_t, pot_th, p_latency)

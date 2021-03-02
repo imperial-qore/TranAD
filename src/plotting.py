@@ -16,7 +16,6 @@ def smooth(y, box_pts=1):
 
 def plotter(name, y_true, y_pred, ascore, labels):
 	os.makedirs(os.path.join('plots', name), exist_ok=True)
-	print(y_true.shape, y_pred.shape, labels.shape, ascore.shape)
 	for dim in range(y_true.shape[1]):
 		y_t, y_p, l, a_s = y_true[:, dim], y_pred[:, dim], labels[:, dim], ascore[:, dim]
 		fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
@@ -26,3 +25,4 @@ def plotter(name, y_true, y_pred, ascore, labels):
 		ax1.legend()
 		ax2.plot(smooth(a_s))
 		fig.savefig(f'plots/{name}/{dim}.pdf')
+		plt.close()

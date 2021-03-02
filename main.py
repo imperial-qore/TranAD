@@ -27,7 +27,7 @@ def load_dataset(dataset):
 		if dataset == 'SMD': file = 'machine-1-1_' + file
 		with open(os.path.join(folder, f'{file}.pkl'), 'rb') as f:
 			loader.append(pickle.load(f))
-	loader = [i[:, 1:2] for i in loader]
+	# loader = [i[:, 1:2] for i in loader]
 	train_loader = DataLoader(loader[0], batch_size=loader[0].shape[0])
 	test_loader = DataLoader(loader[1], batch_size=loader[1].shape[0])
 	labels = loader[2]
@@ -67,24 +67,52 @@ def load_model(modelname, dims):
 def backprop(epoch, model, data, optimizer, scheduler, training = True):
 	l = nn.MSELoss(reduction = 'mean' if training else 'none')
 	if 'VAE' in model.name:
-		y_pred, mu, logvar = model(data)
-		MSE = l(y_pred, data)
-		KLD = torch.mean(-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1), dim=0)
-		loss = MSE + model.beta * KLD
 		if training:
-			print(f'Epoch {epoch},\tMSE = {MSE},\tKLD = {model.beta * KLD}')
+			mses, klds = [], []
+			for i, d in enumerate(data):
+				y_pred, mu, logvar, hidden = model(d, hidden if i else None)
+				MSE = l(y_pred, d)
+				KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=0)
+				loss = MSE + model.beta * KLD
+				mses.append(torch.mean(MSE).item()); klds.append(model.beta * torch.mean(KLD).item())
+				optimizer.zero_grad()
+				loss.backward()
+				optimizer.step()
+			print(f'Epoch {epoch},\tMSE = {np.mean(mses)},\tKLD = {np.mean(klds)}')
+			scheduler.step()
+			return loss.item(), optimizer.param_groups[0]['lr']
 		else:
+			y_preds = []
+			for i, d in enumerate(data):
+				y_pred, _, _, hidden = model(d, hidden if i else None)
+				y_preds.append(y_pred)
+			y_pred = torch.stack(y_preds)
+			MSE = l(y_pred, data)
 			return MSE.detach().numpy(), y_pred.detach().numpy()
 	elif 'USAD' in model.name:
-		ae1s, ae2s, ae2ae1s = model(data)
-		n = epoch + 1; feats = data.shape[1] // w_size
-		l1 = (1 / n) * l(ae1s, data) + (1 - 1/n) * l(ae2ae1s, data)
-		l2 = (1 / n) * l(ae2s, data) + (1 - 1/n) * l(ae2ae1s, data)
-		y_pred = ae1s[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
-		loss = l1 + l2
+		l = nn.MSELoss(reduction = 'none')
+		n = epoch + 1
+		l1s, l2s = [], []
 		if training:
-			print(f'Epoch {epoch},\tL1 = {l1},\tL2 = {l2}')
+			for d in data:
+				ae1s, ae2s, ae2ae1s = model(d)
+				l1 = (1 / n) * l(ae1s, d) + (1 - 1/n) * l(ae2ae1s, d)
+				l2 = (1 / n) * l(ae2s, d) + (1 - 1/n) * l(ae2ae1s, d)
+				l1s.append(torch.mean(l1).item()); l2s.append(torch.mean(l2).item())
+				loss = torch.mean(l1 + l2)
+				optimizer.zero_grad()
+				loss.backward()
+				optimizer.step()
+			print(f'Epoch {epoch},\tL1 = {np.mean(l1s)},\tL2 = {np.mean(l2s)}')
+			return np.mean(l1s)+np.mean(l2s), optimizer.param_groups[0]['lr']
 		else:
+			feats = data.shape[1] // w_size
+			ae1s, ae2s, ae2ae1s = [], [], []
+			for d in data: 
+				ae1, ae2, ae2ae1 = model(d)
+				ae1s.append(ae1); ae2s.append(ae2); ae2ae1s.append(ae2ae1)
+			ae1s, ae2s, ae2ae1s = torch.stack(ae1s), torch.stack(ae2s), torch.stack(ae2ae1s)
+			y_pred = ae1s[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
 			loss = torch.mean(0.5 * l(ae1s, data) + 0.5 * l(ae2ae1s, data), dim=1).view(-1,1).expand(-1, feats)
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	else:
@@ -92,13 +120,13 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 		loss = l(y_pred, data)
 		if training:
 			print(f'Epoch {epoch},\tMSE = {MSE}')
+			optimizer.zero_grad()
+			loss.backward()
+			optimizer.step()
+			scheduler.step()
+			return loss.item(), optimizer.param_groups[0]['lr']
 		else:
 			return loss.detach().numpy(), y_pred.detach().numpy()
-	optimizer.zero_grad()
-	loss.backward()
-	optimizer.step()
-	scheduler.step()
-	return loss.item(), optimizer.param_groups[0]['lr']
 
 if __name__ == '__main__':
 	train_loader, test_loader, labels = load_dataset(args.dataset)
@@ -112,7 +140,7 @@ if __name__ == '__main__':
 
 	### Training phase
 	print(f'Training {args.model} on {args.dataset}')
-	num_epochs = 10; e = epoch + 1
+	num_epochs = 5; e = epoch + 1
 	for e in range(epoch+1, epoch+num_epochs+1):
 		lossT, lr = backprop(e, model, trainD, optimizer, scheduler)
 		accuracy_list.append((lossT, lr))
@@ -123,16 +151,20 @@ if __name__ == '__main__':
 	torch.zero_grad = True
 	model.eval()
 	print(f'Testing {args.model} on {args.dataset}')
-	loss, y_pred = backprop(0, model, trainD, optimizer, scheduler, training=False)
+	loss, y_pred = backprop(0, model, testD, optimizer, scheduler, training=False)
 
 	### Plot curves
-	plotter(f'{args.model}_{args.dataset}', trainO, y_pred, loss, labels)
+	plotter(f'{args.model}_{args.dataset}', testO, y_pred, loss, labels)
 
 	### Scores
 	df = pd.DataFrame()
 	lossT, _ = backprop(0, model, trainD, optimizer, scheduler, training=False)
 	for i in range(loss.shape[1]):
 		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
-		result = pot_eval(lt, l, ls[:])
+		result = pot_eval(lt, l, ls)
 		df = df.append(result, ignore_index=True)
+	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
+	labelsFinal = (np.sum(labels, axis=1) >= 1) + np.zeros(labels.shape[0])
+	result = pot_eval(lossTfinal, lossFinal, labelsFinal)
 	print(df)
+	pprint(result)
