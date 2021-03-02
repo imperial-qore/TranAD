@@ -11,6 +11,13 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 from pprint import pprint
 
+def convert_to_windows(data):
+	windows = []
+	for i, g in enumerate(data): 
+		if i >= w_size: windows.append(data[i-w_size:i].view(-1))
+		else: windows.append(torch.cat([data[0].repeat(w_size-i, 1), data[0:i]]).view(-1))
+	return torch.stack(windows)
+
 def load_dataset(dataset):
 	folder = os.path.join(output_folder, dataset)
 	if not os.path.exists(folder):
@@ -42,7 +49,7 @@ def load_model(modelname, dims):
 	model_class = getattr(src.models, modelname)
 	model = model_class(dims).double()
 	optimizer = torch.optim.AdamW(model.parameters() , lr=model.lr, weight_decay=1e-5)
-	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.5)
+	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.8)
 	fname = f'checkpoints/{args.model}_{args.dataset}/model.ckpt'
 	if os.path.exists(fname):
 		print(f"{color.GREEN}Loading pre-trained model: {model.name}{color.ENDC}")
@@ -59,45 +66,61 @@ def load_model(modelname, dims):
 
 def backprop(epoch, model, data, optimizer, scheduler, training = True):
 	l = nn.MSELoss(reduction = 'mean' if training else 'none')
-	inp, y_true = data[:-1], data[1:]
 	if 'VAE' in model.name:
-		y_pred, mu, logvar = model(inp)
-		MSE = l(y_pred, y_true)
+		y_pred, mu, logvar = model(data)
+		MSE = l(y_pred, data)
 		KLD = torch.mean(-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1), dim=0)
 		loss = MSE + model.beta * KLD
 		if training:
 			print(f'Epoch {epoch},\tMSE = {MSE},\tKLD = {model.beta * KLD}')
+		else:
+			return MSE.detach().numpy(), y_pred.detach().numpy()
+	elif 'USAD' in model.name:
+		ae1s, ae2s, ae2ae1s = model(data)
+		n = epoch + 1
+		l1 = (1 / n) * l(ae1s, data) + (1 - 1/n) * l(ae2ae1s, data)
+		l2 = (1 / n) * l(ae2s, data) + (1 - 1/n) * l(ae2ae1s, data)
+		y_pred = ae2ae1s
+		loss = l1 + l2
+		if training:
+			print(f'Epoch {epoch},\tL1 = {l1},\tL2 = {l2}')
+		else:
+			loss = 0.5 * l(ae1s, data) + 0.5 * l(ae2ae1s, data)
+			return loss.detach().numpy(), y_pred.detach().numpy()
 	else:
-		y_pred = model(inp)
-		MSE = l(y_pred, y_true)
-		loss = MSE
+		y_pred = model(data)
+		loss = l(y_pred, data)
 		if training:
 			print(f'Epoch {epoch},\tMSE = {MSE}')
-	if not training:
-		return MSE.detach().numpy(), y_pred.detach().numpy()
-	else:
-		optimizer.zero_grad()
-		loss.backward()
-		optimizer.step()
-		scheduler.step()
+		else:
+			return loss.detach().numpy(), y_pred.detach().numpy()
+	optimizer.zero_grad()
+	loss.backward()
+	optimizer.step()
+	scheduler.step()
 	return loss.item(), optimizer.param_groups[0]['lr']
 
 if __name__ == '__main__':
 	train_loader, test_loader, labels = load_dataset(args.dataset)
 	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, labels.shape[1])
 
+	## Prepare data
+	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
+	if 'USAD' in model.name: 
+		trainD, testD = convert_to_windows(trainD), convert_to_windows(testD)
+
 	### Training phase
 	print(f'Training {args.model} on {args.dataset}')
-	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	num_epochs = 10
 	for e in range(epoch+1, epoch+num_epochs+1):
 		lossT, lr = backprop(e, model, trainD, optimizer, scheduler)
 		accuracy_list.append((lossT, lr))
 	save_model(model, optimizer, scheduler, e, accuracy_list)
-	torch.zero_grad = True
-	model.eval()
+	plot_accuracies(accuracy_list, f'{args.model}_{args.dataset}')
 
 	### Testing phase
+	torch.zero_grad = True
+	model.eval()
 	print(f'Testing {args.model} on {args.dataset}')
 	loss, y_pred = backprop(0, model, trainD, optimizer, scheduler, training=False)
 
@@ -109,6 +132,6 @@ if __name__ == '__main__':
 	lossT, _ = backprop(0, model, trainD, optimizer, scheduler, training=False)
 	for i in range(loss.shape[1]):
 		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
-		result = pot_eval(lt, l, ls[1:])
+		result = pot_eval(lt, l, ls[:])
 		df = df.append(result, ignore_index=True)
 	print(df)

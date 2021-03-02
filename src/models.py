@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import pickle
+from src.constants import *
 torch.manual_seed(1)
-
 
 ## Separate LSTM for each variable
 class LSTM_Univariate(nn.Module):
@@ -39,16 +39,16 @@ class LSTM_Multivariate(nn.Module):
 		self.n_feats = feats
 		self.n_hidden = 64
 		self.lstm = nn.LSTM(feats, self.n_hidden)
-		self.lstm2 = nn.LSTM(self.n_hidden, self.n_hidden)
+		self.lstm2 = nn.LSTM(feats, self.n_feats)
 		# self.fcn = nn.Sequential(nn.Linear(self.n_hidden, self.n_feats), nn.Sigmoid())
 
 	def forward(self, x):
 		hidden = (torch.rand(1, 1, self.n_hidden, dtype=torch.float64), torch.randn(1, 1, self.n_hidden, dtype=torch.float64))
-		hidden2 = (torch.rand(1, 1, self.n_hidden, dtype=torch.float64), torch.randn(1, 1, self.n_hidden, dtype=torch.float64))
+		hidden2 = (torch.rand(1, 1, self.n_feats, dtype=torch.float64), torch.randn(1, 1, self.n_feats, dtype=torch.float64))
 		outputs = []
 		for i, g in enumerate(x):
 			out, hidden = self.lstm(g.view(1, 1, -1), hidden)
-			out, hidden2 = self.lstm2(out.view(1, 1, -1), hidden2)
+			out, hidden2 = self.lstm2(g.view(1, 1, -1), hidden2)
 			# out = self.fcn(out.view(-1))
 			outputs.append(2 * out.view(-1))
 		return torch.stack(outputs)
@@ -61,9 +61,9 @@ class LSTM_VAE(nn.Module):
 		self.lr = 0.002
 		self.beta = 0.01
 		self.n_feats = feats
-		self.n_hidden = 64
-		self.n_latent = 16
-		self.lstm = nn.LSTM(feats, self.n_hidden)
+		self.n_hidden = 32
+		self.n_latent = 8
+		self.lstm = nn.GRU(feats, self.n_hidden, 2)
 		self.encoder = nn.Sequential(
 			nn.Linear(self.n_hidden, self.n_hidden), nn.PReLU(),
 			nn.Linear(self.n_hidden, self.n_hidden), nn.PReLU(),
@@ -77,7 +77,7 @@ class LSTM_VAE(nn.Module):
 		)
 
 	def forward(self, x):
-		hidden = (torch.rand(1, 1, self.n_hidden, dtype=torch.float64), torch.randn(1, 1, self.n_hidden, dtype=torch.float64))
+		hidden = torch.rand(2, 1, self.n_hidden, dtype=torch.float64)
 		outputs, mus, logvars = [], [], []
 		for i, g in enumerate(x):
 			out, hidden = self.lstm(g.view(1, 1, -1), hidden)
@@ -94,4 +94,46 @@ class LSTM_VAE(nn.Module):
 			mus.append(mu.view(-1))
 			logvars.append(logvar.view(-1))
 		return torch.stack(outputs), torch.stack(mus), torch.stack(logvars)
+
+## USAD Model (KDD 20)
+class USAD(nn.Module):
+	def __init__(self, feats):
+		super(USAD, self).__init__()
+		self.name = 'USAD'
+		self.lr = 0.0001
+		self.n_feats = feats
+		self.n_latent = 5
+		self.n_window = w_size
+		self.n = self.n_feats * self.n_window
+		self.encoder = nn.Sequential(
+			nn.Flatten(),
+			nn.Linear(self.n, self.n // 2), nn.ReLU(),
+			nn.Linear(self.n // 2, self.n // 4), nn.ReLU(),
+			nn.Linear(self.n // 4, self.n_latent), nn.ReLU(),
+		)
+		self.decoder1 = nn.Sequential(
+			nn.Linear(self.n_latent, self.n // 4), nn.ReLU(),
+			nn.Linear(self.n // 4, self.n // 2), nn.ReLU(),
+			nn.Linear(self.n // 2, self.n), nn.Sigmoid(),
+		)
+		self.decoder2 = nn.Sequential(
+			nn.Linear(self.n_latent, self.n // 4), nn.ReLU(),
+			nn.Linear(self.n // 4, self.n // 2), nn.ReLU(),
+			nn.Linear(self.n // 2, self.n), nn.Sigmoid(),
+		)
+
+	def forward(self, windows):
+		ae1s, ae2s, ae2ae1s = [], [], []
+		for g in windows:
+			## Encode
+			z = self.encoder(g.view(1,-1))
+			## Decoders (Phase 1)
+			ae1 = self.decoder1(z)
+			ae2 = self.decoder2(z)
+			## Encode-Decode (Phase 2)
+			ae2ae1 = self.decoder2(self.encoder(ae1))
+			ae1s.append(ae1.view(-1))
+			ae2s.append(ae2.view(-1))
+			ae2ae1s.append(ae2ae1.view(-1))
+		return torch.stack(ae1s), torch.stack(ae2s), torch.stack(ae2ae1s)
 
