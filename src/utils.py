@@ -15,6 +15,7 @@ class color:
     UNDERLINE = '\033[4m'
 
 def plot_accuracies(accuracy_list, folder):
+	os.makedirs(f'plots/{folder}/', exist_ok=True)
 	trainAcc = [i[0] for i in accuracy_list]
 	lrs = [i[1] for i in accuracy_list]
 	plt.xlabel('Epochs')

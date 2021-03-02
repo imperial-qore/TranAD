@@ -102,24 +102,25 @@ class USAD(nn.Module):
 		self.name = 'USAD'
 		self.lr = 0.0001
 		self.n_feats = feats
+		self.n_hidden = 16
 		self.n_latent = 5
 		self.n_window = w_size
 		self.n = self.n_feats * self.n_window
 		self.encoder = nn.Sequential(
 			nn.Flatten(),
-			nn.Linear(self.n, self.n // 2), nn.ReLU(),
-			nn.Linear(self.n // 2, self.n // 4), nn.ReLU(),
-			nn.Linear(self.n // 4, self.n_latent), nn.ReLU(),
+			nn.Linear(self.n, self.n_hidden), nn.ReLU(),
+			nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(),
+			nn.Linear(self.n_hidden, self.n_latent), nn.ReLU(),
 		)
 		self.decoder1 = nn.Sequential(
-			nn.Linear(self.n_latent, self.n // 4), nn.ReLU(),
-			nn.Linear(self.n // 4, self.n // 2), nn.ReLU(),
-			nn.Linear(self.n // 2, self.n), nn.Sigmoid(),
+			nn.Linear(self.n_latent,self.n_hidden), nn.ReLU(),
+			nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(),
+			nn.Linear(self.n_hidden, self.n), nn.Sigmoid(),
 		)
 		self.decoder2 = nn.Sequential(
-			nn.Linear(self.n_latent, self.n // 4), nn.ReLU(),
-			nn.Linear(self.n // 4, self.n // 2), nn.ReLU(),
-			nn.Linear(self.n // 2, self.n), nn.Sigmoid(),
+			nn.Linear(self.n_latent,self.n_hidden), nn.ReLU(),
+			nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(),
+			nn.Linear(self.n_hidden, self.n), nn.Sigmoid(),
 		)
 
 	def forward(self, windows):

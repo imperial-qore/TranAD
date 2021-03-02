@@ -77,15 +77,15 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 			return MSE.detach().numpy(), y_pred.detach().numpy()
 	elif 'USAD' in model.name:
 		ae1s, ae2s, ae2ae1s = model(data)
-		n = epoch + 1
+		n = epoch + 1; feats = data.shape[1] // w_size
 		l1 = (1 / n) * l(ae1s, data) + (1 - 1/n) * l(ae2ae1s, data)
 		l2 = (1 / n) * l(ae2s, data) + (1 - 1/n) * l(ae2ae1s, data)
-		y_pred = ae2ae1s
+		y_pred = ae1s[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
 		loss = l1 + l2
 		if training:
 			print(f'Epoch {epoch},\tL1 = {l1},\tL2 = {l2}')
 		else:
-			loss = 0.5 * l(ae1s, data) + 0.5 * l(ae2ae1s, data)
+			loss = torch.mean(0.5 * l(ae1s, data) + 0.5 * l(ae2ae1s, data), dim=1).view(-1,1).expand(-1, feats)
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	else:
 		y_pred = model(data)
@@ -106,12 +106,13 @@ if __name__ == '__main__':
 
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
+	trainO, testO = trainD, testD
 	if 'USAD' in model.name: 
 		trainD, testD = convert_to_windows(trainD), convert_to_windows(testD)
 
 	### Training phase
 	print(f'Training {args.model} on {args.dataset}')
-	num_epochs = 10
+	num_epochs = 10; e = epoch + 1
 	for e in range(epoch+1, epoch+num_epochs+1):
 		lossT, lr = backprop(e, model, trainD, optimizer, scheduler)
 		accuracy_list.append((lossT, lr))
@@ -125,7 +126,7 @@ if __name__ == '__main__':
 	loss, y_pred = backprop(0, model, trainD, optimizer, scheduler, training=False)
 
 	### Plot curves
-	plotter(f'{args.model}_{args.dataset}', trainD, y_pred, loss, labels)
+	plotter(f'{args.model}_{args.dataset}', trainO, y_pred, loss, labels)
 
 	### Scores
 	df = pd.DataFrame()

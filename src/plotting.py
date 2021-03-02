@@ -16,8 +16,9 @@ def smooth(y, box_pts=1):
 
 def plotter(name, y_true, y_pred, ascore, labels):
 	os.makedirs(os.path.join('plots', name), exist_ok=True)
+	print(y_true.shape, y_pred.shape, labels.shape, ascore.shape)
 	for dim in range(y_true.shape[1]):
-		y_t, y_p, l, a_s = y_true[16000:21000, dim], y_pred[16000:21000, dim], labels[16000:21000, dim], ascore[16000:21000, dim]
+		y_t, y_p, l, a_s = y_true[:, dim], y_pred[:, dim], labels[:, dim], ascore[:, dim]
 		fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 		ax1.plot(smooth(y_t), label='True')
 		ax1.plot(smooth(y_p), '-', alpha=0.6, label='Predicted')
