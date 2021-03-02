@@ -76,7 +76,7 @@ class LSTM_VAE(nn.Module):
 			nn.Linear(self.n_hidden, self.n_feats), nn.Tanh(),
 		)
 
-	def forward(self, x, training):
+	def forward(self, x):
 		hidden = (torch.rand(1, 1, self.n_hidden, dtype=torch.float64), torch.randn(1, 1, self.n_hidden, dtype=torch.float64))
 		outputs, mus, logvars = [], [], []
 		for i, g in enumerate(x):
@@ -87,7 +87,7 @@ class LSTM_VAE(nn.Module):
 			## Reparameterization trick
 			std = torch.exp(0.5*logvar)
 			eps = torch.randn_like(std)
-			x = mu + eps*std if training else mu
+			x = mu + eps*std
 			## Decoder
 			x = self.decoder(x)
 			outputs.append(x.view(-1))

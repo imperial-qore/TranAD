@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 processed/
 plots/
+checkpoints/
 
 # C extensions
 *.so
