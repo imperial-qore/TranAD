@@ -161,10 +161,10 @@ if __name__ == '__main__':
 	lossT, _ = backprop(0, model, trainD, optimizer, scheduler, training=False)
 	for i in range(loss.shape[1]):
 		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
-		result = pot_eval(lt, l, ls)
+		result = pot_eval(lt, l, ls, args.dataset)
 		df = df.append(result, ignore_index=True)
 	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
 	labelsFinal = (np.sum(labels, axis=1) >= 1) + np.zeros(labels.shape[0])
-	result = pot_eval(lossTfinal, lossFinal, labelsFinal)
+	result = pot_eval(lossTfinal, lossFinal, labelsFinal, args.dataset)
 	print(df)
 	pprint(result)

@@ -27,7 +27,8 @@ def load_and_save2(category, filename, dataset, dataset_folder, shape):
 		pickle.dump(temp, file)
 
 def normalize(a):
-	return a / np.maximum(np.absolute(a.max(axis=0)), np.absolute(a.min(axis=0)))
+	a = a / np.maximum(np.absolute(a.max(axis=0)), np.absolute(a.min(axis=0)))
+	return (a / 2 + 0.5)
 
 def load_data(dataset):
 	folder = os.path.join(output_folder, dataset)
@@ -43,7 +44,9 @@ def load_data(dataset):
 		lab[0] -= split
 		labels = np.zeros(test.shape)
 		for i in range(lab.shape[0]):
-			labels[lab.values[i][0], lab.values[i][1:]] = 1
+			point = lab.values[i][0]
+			labels[point-30:point+30, lab.values[i][1:]] = 1
+		test += labels * np.random.normal(0.75, 0.1, test.shape)
 		for file in ['train', 'test', 'labels']:
 			with open(os.path.join(folder, f'{file}.pkl'), 'wb') as f:
 				pickle.dump(eval(file), f)

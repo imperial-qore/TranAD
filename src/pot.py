@@ -1,6 +1,7 @@
 import numpy as np
 
 from src.spot import SPOT
+from src.constants import lm
 
 
 def calc_point2point(predict, actual):
@@ -111,7 +112,7 @@ def bf_search(score, label, start, end=None, step_num=1, display_freq=1, verbose
     return m, m_t
 
 
-def pot_eval(init_score, score, label, q=1e-5, level=0.02):
+def pot_eval(init_score, score, label, d, q=1e-5, level=0.02):
     """
     Run POT method on given score.
     Args:
@@ -127,11 +128,11 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02):
     """
     s = SPOT(q)  # SPOT object
     s.fit(init_score, score)  # data import
-    s.initialize(level=0.99995, min_extrema=False, verbose=False)  # initialization step
+    s.initialize(level=lm[d][0], min_extrema=False, verbose=False)  # initialization step
     ret = s.run(dynamic=False)  # run
     # print(len(ret['alarms']))
     # print(len(ret['thresholds']))
-    pot_th = np.mean(ret['thresholds']) * 1.04
+    pot_th = np.mean(ret['thresholds']) * lm[d][1]
     pred, p_latency = adjust_predicts(score, label, pot_th, calc_latency=True)
     p_t = calc_point2point(pred, label)
     # print('POT result: ', p_t, pot_th, p_latency)
