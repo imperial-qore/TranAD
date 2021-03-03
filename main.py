@@ -139,7 +139,6 @@ if __name__ == '__main__':
 	if 'USAD' in model.name: 
 		trainD, testD = convert_to_windows(trainD), convert_to_windows(testD)
 
-	print(args.test)
 	### Training phase
 	print(f'Training {args.model} on {args.dataset}')
 	num_epochs = 0 if args.test else 5; e = epoch + 1
@@ -167,7 +166,7 @@ if __name__ == '__main__':
 		result = pot_eval(lt, l, ls, args.dataset)
 		df = df.append(result, ignore_index=True)
 	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
-	labelsFinal = (np.sum(labels, axis=1) >= 1) + np.zeros(labels.shape[0])
+	labelsFinal = (np.sum(labels, axis=1) >= 1) + 0
 	result = pot_eval(lossTfinal, lossFinal, labelsFinal, args.dataset)
 	print(df)
 	pprint(result)

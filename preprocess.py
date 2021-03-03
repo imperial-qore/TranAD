@@ -6,6 +6,8 @@ import pickle
 from src.constants import *
 from shutil import copyfile
 
+datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI']
+
 def load_and_save(category, filename, dataset, dataset_folder):
     temp = np.genfromtxt(os.path.join(dataset_folder, category, filename),
                          dtype=np.float64,
@@ -32,6 +34,9 @@ def normalize(a):
 def normalize2(a, min_a = None, max_a = None):
 	if min_a is None: min_a, max_a = min(a), max(a)
 	return (a - min_a) / (max_a - min_a), min_a, max_a
+
+def convertNumpy(df):
+	return df[df.columns[3:]].values[::2, :]
 
 def load_data(dataset):
 	folder = os.path.join(output_folder, dataset)
@@ -87,17 +92,37 @@ def load_data(dataset):
 			for i in range(0, len(indices), 2):
 				labels[indices[i]:indices[i+1], :] = 1
 			np.save(f'{folder}/{fn}_labels.npy', labels)
+	elif dataset == 'WADI':
+		dataset_folder = 'data/WADI'
+		ls = pd.read_csv(os.path.join(dataset_folder, 'WADI_attacklabels.csv'))
+		train = pd.read_csv(os.path.join(dataset_folder, 'WADI_14days.csv'), skiprows=1000, nrows=2e5)
+		test = pd.read_csv(os.path.join(dataset_folder, 'WADI_attackdata.csv'))
+		test['Time'] = test['Time'].astype(str)
+		test['Time'] = pd.to_datetime(test['Date'] + ' ' + test['Time'])
+		labels = test.copy(deep = True)
+		for i in test.columns.tolist()[3:]: labels[i] = 0
+		for i in ['Start Time', 'End Time']: 
+			ls[i] = ls[i].astype(str)
+			ls[i] = pd.to_datetime(ls['Date'] + ' ' + ls[i])
+		for index, row in ls.iterrows():
+			to_match = row['Affected'].split(', ')
+			matched = []
+			for i in test.columns.tolist()[3:]:
+				if i in to_match: matched.append[i]
+			st, et = str(row['Start Time']), str(row['End Time'])
+			labels[(labels['Time'] >= st) & (labels['Time'] <= et)][matched] = 1
+		train, test, labels = convertNumpy(train), convertNumpy(test), convertNumpy(labels)
+		for file in ['train', 'test', 'labels']:
+			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
 	else:
-		raise Exception('Not Implemented')
+		raise Exception(f'Not Implemented. Check one of {datasets}')
 
 if __name__ == '__main__':
-	datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL']
 	commands = sys.argv[1:]
 	load = []
 	if len(commands) > 0:
 		for d in commands:
-			if d in datasets:
-				load_data(d)
+			load_data(d)
 	else:
 		print("Usage: python preprocess.py <datasets>")
 		print("where <datasets> is space separated list of ['synthtic', 'SMD']")
