@@ -13,4 +13,7 @@ parser.add_argument('--model',
 					required=False,
 					default='LSTM_Multivariate',
                     help="model name")
+parser.add_argument('--test', 
+					action='store_true', 
+					help="test the model")
 args = parser.parse_args()
