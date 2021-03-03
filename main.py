@@ -25,8 +25,9 @@ def load_dataset(dataset):
 	loader = []
 	for file in ['train', 'test', 'labels']:
 		if dataset == 'SMD': file = 'machine-1-1_' + file
-		with open(os.path.join(folder, f'{file}.pkl'), 'rb') as f:
-			loader.append(pickle.load(f))
+		if dataset == 'SMAP': file = 'P-1_' + file
+		if dataset == 'MSL': file = 'F-7_' + file
+		loader.append(np.load(os.path.join(folder, f'{file}.npy')))
 	# loader = [i[:, 1:2] for i in loader]
 	train_loader = DataLoader(loader[0], batch_size=loader[0].shape[0])
 	test_loader = DataLoader(loader[1], batch_size=loader[1].shape[0])
@@ -140,7 +141,7 @@ if __name__ == '__main__':
 
 	### Training phase
 	print(f'Training {args.model} on {args.dataset}')
-	num_epochs = 0; e = epoch + 1
+	num_epochs = 5; e = epoch + 1
 	for e in range(epoch+1, epoch+num_epochs+1):
 		lossT, lr = backprop(e, model, trainD, optimizer, scheduler)
 		accuracy_list.append((lossT, lr))
@@ -154,7 +155,7 @@ if __name__ == '__main__':
 	loss, y_pred = backprop(0, model, testD, optimizer, scheduler, training=False)
 
 	### Plot curves
-	# plotter(f'{args.model}_{args.dataset}', testO, y_pred, loss, labels)
+	plotter(f'{args.model}_{args.dataset}', testO, y_pred, loss, labels)
 
 	### Scores
 	df = pd.DataFrame()

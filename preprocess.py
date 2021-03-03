@@ -4,14 +4,14 @@ import pandas as pd
 import numpy as np
 import pickle
 from src.constants import *
+from shutil import copyfile
 
 def load_and_save(category, filename, dataset, dataset_folder):
     temp = np.genfromtxt(os.path.join(dataset_folder, category, filename),
                          dtype=np.float64,
                          delimiter=',')
     print(dataset, category, filename, temp.shape)
-    with open(os.path.join(output_folder, f"SMD/{dataset}_{category}.pkl"), "wb") as file:
-        pickle.dump(temp, file)
+    np.save(os.path.join(output_folder, f"SMD/{dataset}_{category}.npy"), temp)
     return temp.shape
 
 def load_and_save2(category, filename, dataset, dataset_folder, shape):
@@ -23,12 +23,15 @@ def load_and_save2(category, filename, dataset, dataset_folder, shape):
 		start, end, indx = int(pos.split('-')[0]), int(pos.split('-')[1]), [int(i)-1 for i in values]
 		temp[start-1:end-1, indx] = 1
 	print(dataset, category, filename, temp.shape)
-	with open(os.path.join(output_folder, f"SMD/{dataset}_{category}.pkl"), "wb") as file:
-		pickle.dump(temp, file)
+	np.save(os.path.join(output_folder, f"SMD/{dataset}_{category}.npy"), temp)
 
 def normalize(a):
 	a = a / np.maximum(np.absolute(a.max(axis=0)), np.absolute(a.min(axis=0)))
 	return (a / 2 + 0.5)
+
+def normalize2(a, min_a = None, max_a = None):
+	if min_a is None: min_a, max_a = min(a), max(a)
+	return (a - min_a) / (max_a - min_a), min_a, max_a
 
 def load_data(dataset):
 	folder = os.path.join(output_folder, dataset)
@@ -48,8 +51,7 @@ def load_data(dataset):
 			labels[point-30:point+30, lab.values[i][1:]] = 1
 		test += labels * np.random.normal(0.75, 0.1, test.shape)
 		for file in ['train', 'test', 'labels']:
-			with open(os.path.join(folder, f'{file}.pkl'), 'wb') as f:
-				pickle.dump(eval(file), f)
+			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
 	elif dataset == 'SMD':
 		dataset_folder = 'data/SMD'
 		file_list = os.listdir(os.path.join(dataset_folder, "train"))
@@ -58,11 +60,38 @@ def load_data(dataset):
 				load_and_save('train', filename, filename.strip('.txt'), dataset_folder)
 				s = load_and_save('test', filename, filename.strip('.txt'), dataset_folder)
 				load_and_save2('labels', filename, filename.strip('.txt'), dataset_folder, s)
+	elif dataset == 'SWaT':
+		dataset_folder = 'data/SWaT'
+		file = os.path.join(dataset_folder, 'series.json')
+		df_train = pd.read_json(file, lines=True)[['val']][3000:6000]
+		df_test  = pd.read_json(file, lines=True)[['val']][7000:12000]
+		train, min_a, max_a = normalize2(df_train.values)
+		test, _, _ = normalize2(df_test.values, min_a, max_a)
+		labels = pd.read_json(file, lines=True)[['noti']][7000:12000] + 0
+		for file in ['train', 'test', 'labels']:
+			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
+	elif dataset in ['SMAP', 'MSL']:
+		dataset_folder = 'data/SMAP_MSL'
+		file = os.path.join(dataset_folder, 'labeled_anomalies.csv')
+		values = pd.read_csv(file)
+		values = values[values['spacecraft'] == dataset]
+		filenames = values['chan_id'].values.tolist()
+		for fn in filenames:
+			copyfile(f'{dataset_folder}/train/{fn}.npy', f'{folder}/{fn}_train.npy')
+			test = np.load(f'{dataset_folder}/test/{fn}.npy')
+			copyfile(f'{dataset_folder}/test/{fn}.npy', f'{folder}/{fn}_test.npy')
+			labels = np.zeros(test.shape)
+			indices = values[values['chan_id'] == fn]['anomaly_sequences'].values[0]
+			indices = indices.replace(']', '').replace('[', '').split(', ')
+			indices = [int(i) for i in indices]
+			for i in range(0, len(indices), 2):
+				labels[indices[i]:indices[i+1], :] = 1
+			np.save(f'{folder}/{fn}_labels.npy', labels)
 	else:
 		raise Exception('Not Implemented')
 
 if __name__ == '__main__':
-	datasets = ['synthetic', 'SMD']
+	datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL']
 	commands = sys.argv[1:]
 	load = []
 	if len(commands) > 0:
