@@ -8,6 +8,8 @@ from shutil import copyfile
 
 datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI']
 
+wadi_drop = ['2_LS_001_AL', '2_LS_002_AL','2_P_001_STATUS','2_P_002_STATUS']
+
 def load_and_save(category, filename, dataset, dataset_folder):
     temp = np.genfromtxt(os.path.join(dataset_folder, category, filename),
                          dtype=np.float64,
@@ -36,7 +38,8 @@ def normalize2(a, min_a = None, max_a = None):
 	return (a - min_a) / (max_a - min_a), min_a, max_a
 
 def convertNumpy(df):
-	return df[df.columns[3:]].values[::2, :]
+	x = df[df.columns[3:]].values[::10, :]
+	return (x - x.min(0)) / (x.ptp(0) + 1e-4)
 
 def load_data(dataset):
 	folder = os.path.join(output_folder, dataset)
@@ -97,6 +100,8 @@ def load_data(dataset):
 		ls = pd.read_csv(os.path.join(dataset_folder, 'WADI_attacklabels.csv'))
 		train = pd.read_csv(os.path.join(dataset_folder, 'WADI_14days.csv'), skiprows=1000, nrows=2e5)
 		test = pd.read_csv(os.path.join(dataset_folder, 'WADI_attackdata.csv'))
+		train.dropna(how='all', inplace=True); test.dropna(how='all', inplace=True)
+		train.fillna(0, inplace=True); test.fillna(0, inplace=True)
 		test['Time'] = test['Time'].astype(str)
 		test['Time'] = pd.to_datetime(test['Date'] + ' ' + test['Time'])
 		labels = test.copy(deep = True)
@@ -108,10 +113,13 @@ def load_data(dataset):
 			to_match = row['Affected'].split(', ')
 			matched = []
 			for i in test.columns.tolist()[3:]:
-				if i in to_match: matched.append[i]
+				for tm in to_match:
+					if tm in i: 
+						matched.append(i); break			
 			st, et = str(row['Start Time']), str(row['End Time'])
-			labels[(labels['Time'] >= st) & (labels['Time'] <= et)][matched] = 1
+			labels.loc[(labels['Time'] >= st) & (labels['Time'] <= et), matched] = 1
 		train, test, labels = convertNumpy(train), convertNumpy(test), convertNumpy(labels)
+		print(train.shape, test.shape, labels.shape)
 		for file in ['train', 'test', 'labels']:
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
 	else:
