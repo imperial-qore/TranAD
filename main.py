@@ -171,3 +171,4 @@ if __name__ == '__main__':
 	result = pot_eval(lossTfinal, lossFinal, labelsFinal, args.dataset)
 	print(df)
 	pprint(result)
+	# pprint(getresults2(df, result))

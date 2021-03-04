@@ -26,3 +26,11 @@ def plot_accuracies(accuracy_list, folder):
 	plt.savefig(f'plots/{folder}/training-graph.pdf')
 	plt.clf()
 
+def getresults2(df, result):
+	results2, df1, df2 = {}, df.sum(), df.mean()
+	for a in ['FN', 'FP', 'TP', 'TN']:
+		results2[a] = df1[a]
+	for a in ['precision', 'recall']:
+		results2[a] = df2[a]
+	results2['f1*'] = 2 * results2['precision'] * results2['recall'] / (results2['precision'] + results2['recall'])
+	return results2
