@@ -1,6 +1,7 @@
 import pickle
 import os
 import pandas as pd
+from tqdm import tqdm
 from src.parser import *
 from src.models import *
 from src.constants import *
@@ -79,7 +80,7 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 				optimizer.zero_grad()
 				loss.backward()
 				optimizer.step()
-			print(f'Epoch {epoch},\tMSE = {np.mean(mses)},\tKLD = {np.mean(klds)}')
+			tqdm.write(f'Epoch {epoch},\tMSE = {np.mean(mses)},\tKLD = {np.mean(klds)}')
 			scheduler.step()
 			return loss.item(), optimizer.param_groups[0]['lr']
 		else:
@@ -104,7 +105,7 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 				optimizer.zero_grad()
 				loss.backward()
 				optimizer.step()
-			print(f'Epoch {epoch},\tL1 = {np.mean(l1s)},\tL2 = {np.mean(l2s)}')
+			tqdm.write(f'Epoch {epoch},\tL1 = {np.mean(l1s)},\tL2 = {np.mean(l2s)}')
 			return np.mean(l1s)+np.mean(l2s), optimizer.param_groups[0]['lr']
 		else:
 			feats = data.shape[1] // w_size
@@ -143,7 +144,7 @@ if __name__ == '__main__':
 	### Training phase
 	print(f'Training {args.model} on {args.dataset}')
 	num_epochs = 0 if args.test else 5; e = epoch + 1
-	for e in range(epoch+1, epoch+num_epochs+1):
+	for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
 		lossT, lr = backprop(e, model, trainD, optimizer, scheduler)
 		accuracy_list.append((lossT, lr))
 	save_model(model, optimizer, scheduler, e, accuracy_list)
