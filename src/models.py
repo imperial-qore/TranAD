@@ -5,6 +5,8 @@ import torch.optim as optim
 import pickle
 import dgl
 from dgl.nn import GATConv
+from torch.nn import TransformerEncoder
+from torch.nn import TransformerDecoder
 from src.dlutils import *
 from src.constants import *
 torch.manual_seed(1)
@@ -33,11 +35,11 @@ class LSTM_Univariate(nn.Module):
 			outputs.append(output)
 		return torch.stack(outputs)
 
-## Single LSTM model for all variables
-class LSTM_Multivariate(nn.Module):
+## LSTM_AD Model
+class LSTM_AD(nn.Module):
 	def __init__(self, feats):
-		super(LSTM_Multivariate, self).__init__()
-		self.name = 'LSTM_Multivariate'
+		super(LSTM_AD, self).__init__()
+		self.name = 'LSTM_AD'
 		self.lr = 0.002
 		self.n_feats = feats
 		self.n_hidden = 64
@@ -56,7 +58,7 @@ class LSTM_Multivariate(nn.Module):
 			outputs.append(2 * out.view(-1))
 		return torch.stack(outputs)
 
-## Single LSTM model for all variables + VAE
+## LSTM_VAE Model (KDD 19)
 class LSTM_VAE(nn.Module):
 	def __init__(self, feats):
 		super(LSTM_VAE, self).__init__()
@@ -223,3 +225,27 @@ class MAD_GAN(nn.Module):
 		real_score = self.discriminator(g.view(1,-1))
 		fake_score = self.discriminator(z.view(1,-1))
 		return z.view(-1), real_score.view(-1), fake_score.view(-1)
+
+class ProTran(nn.Module):
+	def __init__(self, feats):
+		super(ProTran, self).__init__()
+		self.name = 'ProTran'
+		self.lr = 0.0001
+		self.batch = 64
+		self.n_feats = feats
+		self.n_window = 10
+		self.n = self.n_feats * self.n_window
+		self.pos_encoder = PositionalEncoding(feats, 0.1, self.n_window)
+		encoder_layers = TransformerEncoderLayer(d_model=feats, nhead=feats, dim_feedforward=16, dropout=0.1)
+		self.transformer_encoder = TransformerEncoder(encoder_layers, 2)
+		decoder_layers = TransformerDecoderLayer(d_model=feats, nhead=feats, dim_feedforward=16, dropout=0.1)
+		self.transformer_decoder = TransformerDecoder(decoder_layers, 2)
+		self.fcn = nn.Sigmoid()
+
+	def forward(self, src, tgt):
+		src = src * math.sqrt(self.n_feats)
+		src = self.pos_encoder(src)
+		memory = self.transformer_encoder(src)
+		x = self.transformer_decoder(tgt, memory)
+		x = self.fcn(x)
+		return x

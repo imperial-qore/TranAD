@@ -8,15 +8,16 @@ from src.constants import *
 from src.plotting import *
 from src.pot import *
 from src.utils import *
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch.nn as nn
 from pprint import pprint
 
 def convert_to_windows(data, model):
 	windows = []; w_size = model.n_window
 	for i, g in enumerate(data): 
-		if i >= w_size: windows.append(data[i-w_size:i].view(-1))
-		else: windows.append(torch.cat([data[0].repeat(w_size-i, 1), data[0:i]]).view(-1))
+		if i >= w_size: w = data[i-w_size:i]
+		else: w = torch.cat([data[0].repeat(w_size-i, 1), data[0:i]])
+		windows.append(w if 'ProTran' in args.model else w.view(-1))
 	return torch.stack(windows)
 
 def load_dataset(dataset):
@@ -53,7 +54,7 @@ def load_model(modelname, dims):
 	optimizer = torch.optim.AdamW(model.parameters() , lr=model.lr, weight_decay=1e-5)
 	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.8)
 	fname = f'checkpoints/{args.model}_{args.dataset}/model.ckpt'
-	if os.path.exists(fname):
+	if os.path.exists(fname) and not args.retrain:
 		print(f"{color.GREEN}Loading pre-trained model: {model.name}{color.ENDC}")
 		checkpoint = torch.load(fname)
 		model.load_state_dict(checkpoint['model_state_dict'])
@@ -66,8 +67,9 @@ def load_model(modelname, dims):
 		epoch = -1; accuracy_list = []
 	return model, optimizer, scheduler, epoch, accuracy_list
 
-def backprop(epoch, model, data, optimizer, scheduler, training = True):
+def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 	l = nn.MSELoss(reduction = 'mean' if training else 'none')
+	feats = dataO.shape[1]
 	if 'VAE' in model.name:
 		if training:
 			mses, klds = [], []
@@ -108,7 +110,6 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 			tqdm.write(f'Epoch {epoch},\tL1 = {np.mean(l1s)},\tL2 = {np.mean(l2s)}')
 			return np.mean(l1s)+np.mean(l2s), optimizer.param_groups[0]['lr']
 		else:
-			feats = data.shape[1] // w_size
 			ae1s, ae2s, ae2ae1s = [], [], []
 			for d in data: 
 				ae1, ae2, ae2ae1 = model(d)
@@ -136,7 +137,6 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 			tqdm.write(f'Epoch {epoch},\tMSE = {np.mean(l1s)}')
 			return np.mean(l1s), optimizer.param_groups[0]['lr']
 		else:
-			feats = data.shape[1] // w_size
 			xs = []
 			for d in data: 
 				x = model(d)
@@ -176,7 +176,6 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 			tqdm.write(f'Epoch {epoch},\tMSE = {np.mean(mses)},\tG = {np.mean(gls)},\tD = {np.mean(dls)}')
 			return np.mean(gls)+np.mean(dls), optimizer.param_groups[0]['lr']
 		else:
-			feats = data.shape[1] // w_size
 			outputs = []
 			for d in data: 
 				z, _, _ = model(d)
@@ -186,6 +185,36 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 			loss = l(outputs, data)
 			loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
 			return loss.detach().numpy(), y_pred.detach().numpy()
+	elif 'ProTran' in model.name:
+		l = nn.MSELoss(reduction = 'none')
+		data_x = torch.DoubleTensor(data); dataset = TensorDataset(data_x, data_x)
+		bs = model.batch if training else len(data)
+		dataloader = DataLoader(dataset, batch_size = bs)
+		n = epoch + 1; w_size = model.n_window
+		l1s, l2s = [], []
+		if training:
+			for d, _ in dataloader:
+				local_bs = d.shape[0]
+				window = d.permute(1, 0, 2)
+				elem = window[-1, :, :].view(1, local_bs, feats)
+				z = model(window, elem)
+				l1 = l(z, elem)
+				l1s.append(torch.mean(l1).item())
+				loss = torch.mean(l1)
+				optimizer.zero_grad()
+				loss.backward(retain_graph=True)
+				optimizer.step()
+			tqdm.write(f'Epoch {epoch},\tL1 = {np.mean(l1s)}')
+			return np.mean(l1s), optimizer.param_groups[0]['lr']
+		else:
+			for d, _ in dataloader:
+				window = d.permute(1, 0, 2)
+				elem = window[-1, :, :].view(1, bs, feats)
+				z = model(window, elem)
+			print(z.shape, elem.shape)
+			loss = l(z, elem)[0]
+			print(loss.detach().numpy().shape)
+			return loss.detach().numpy(), z.detach().numpy()[0]
 	else:
 		y_pred = model(data)
 		loss = l(y_pred, data)
@@ -206,7 +235,7 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	trainO, testO = trainD, testD
-	if model.name in ['USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN']: 
+	if model.name in ['USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN', 'ProTran']: 
 		trainD, testD = convert_to_windows(trainD, model), convert_to_windows(testD, model)
 
 	### Training phase
@@ -214,7 +243,7 @@ if __name__ == '__main__':
 		print(f'Training {args.model} on {args.dataset}')
 		num_epochs = 5; e = epoch + 1
 		for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
-			lossT, lr = backprop(e, model, trainD, optimizer, scheduler)
+			lossT, lr = backprop(e, model, trainD, trainO, optimizer, scheduler)
 			accuracy_list.append((lossT, lr))
 		save_model(model, optimizer, scheduler, e, accuracy_list)
 		plot_accuracies(accuracy_list, f'{args.model}_{args.dataset}')
@@ -223,7 +252,7 @@ if __name__ == '__main__':
 	torch.zero_grad = True
 	model.eval()
 	print(f'Testing {args.model} on {args.dataset}')
-	loss, y_pred = backprop(0, model, testD, optimizer, scheduler, training=False)
+	loss, y_pred = backprop(0, model, testD, testO, optimizer, scheduler, training=False)
 
 	### Plot curves
 	if not args.test:
@@ -231,7 +260,7 @@ if __name__ == '__main__':
 
 	### Scores
 	df = pd.DataFrame()
-	lossT, _ = backprop(0, model, trainD, optimizer, scheduler, training=False)
+	lossT, _ = backprop(0, model, trainD, trainO, optimizer, scheduler, training=False)
 	for i in range(loss.shape[1]):
 		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
 		result = pot_eval(lt, l, ls, args.dataset)
