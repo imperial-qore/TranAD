@@ -12,8 +12,8 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 from pprint import pprint
 
-def convert_to_windows(data):
-	windows = []
+def convert_to_windows(data, model):
+	windows = []; w_size = model.n_window
 	for i, g in enumerate(data): 
 		if i >= w_size: windows.append(data[i-w_size:i].view(-1))
 		else: windows.append(torch.cat([data[0].repeat(w_size-i, 1), data[0:i]]).view(-1))
@@ -93,7 +93,7 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 			return MSE.detach().numpy(), y_pred.detach().numpy()
 	elif 'USAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		n = epoch + 1
+		n = epoch + 1; w_size = model.n_window
 		l1s, l2s = [], []
 		if training:
 			for d in data:
@@ -118,6 +118,74 @@ def backprop(epoch, model, data, optimizer, scheduler, training = True):
 			loss = 0.1 * l(ae1s, data) + 0.9 * l(ae2ae1s, data)
 			loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
 			return loss.detach().numpy(), y_pred.detach().numpy()
+	elif 'MSCRED' in model.name or 'MTAD_GAT' in model.name:
+		l = nn.MSELoss(reduction = 'none')
+		n = epoch + 1; w_size = model.n_window
+		l1s = []
+		if training:
+			for i, d in enumerate(data):
+				if 'MTAD_GAT' in model.name: 
+					x, h = model(d, h if i else None)
+				else:
+					x = model(d)
+				loss = torch.mean(l(x, d))
+				l1s.append(torch.mean(loss).item())
+				optimizer.zero_grad()
+				loss.backward()
+				optimizer.step()
+			tqdm.write(f'Epoch {epoch},\tMSE = {np.mean(l1s)}')
+			return np.mean(l1s), optimizer.param_groups[0]['lr']
+		else:
+			feats = data.shape[1] // w_size
+			xs = []
+			for d in data: 
+				x = model(d)
+				xs.append(x)
+			xs = torch.stack(xs)
+			y_pred = xs[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
+			loss = l(xs, data)
+			loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
+			return loss.detach().numpy(), y_pred.detach().numpy()
+	elif 'GAN' in model.name:
+		l = nn.MSELoss(reduction = 'none')
+		bcel = nn.BCELoss(reduction = 'mean')
+		msel = nn.MSELoss(reduction = 'mean')
+		real_label, fake_label = torch.tensor([0.9]), torch.tensor([0.1]) # label smoothing
+		real_label, fake_label = real_label.type(torch.DoubleTensor), fake_label.type(torch.DoubleTensor)
+		n = epoch + 1; w_size = model.n_window
+		mses, gls, dls = [], [], []
+		if training:
+			for d in data:
+				# training discriminator
+				model.discriminator.zero_grad()
+				_, real, fake = model(d)
+				dl = bcel(real, real_label) + bcel(fake, fake_label)
+				dl.backward()
+				model.generator.zero_grad()
+				optimizer.step()
+				# training generator
+				z, _, fake = model(d)
+				mse = msel(z, d) 
+				gl = bcel(fake, real_label)
+				tl = gl + mse
+				tl.backward()
+				model.discriminator.zero_grad()
+				optimizer.step()
+				mses.append(mse.item()); gls.append(gl.item()); dls.append(dl.item())
+				# tqdm.write(f'Epoch {epoch},\tMSE = {mse},\tG = {gl},\tD = {dl}')
+			tqdm.write(f'Epoch {epoch},\tMSE = {np.mean(mses)},\tG = {np.mean(gls)},\tD = {np.mean(dls)}')
+			return np.mean(gls)+np.mean(dls), optimizer.param_groups[0]['lr']
+		else:
+			feats = data.shape[1] // w_size
+			outputs = []
+			for d in data: 
+				z, _, _ = model(d)
+				outputs.append(z)
+			outputs = torch.stack(outputs)
+			y_pred = outputs[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
+			loss = l(outputs, data)
+			loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
+			return loss.detach().numpy(), y_pred.detach().numpy()
 	else:
 		y_pred = model(data)
 		loss = l(y_pred, data)
@@ -138,17 +206,18 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	trainO, testO = trainD, testD
-	if 'USAD' in model.name: 
-		trainD, testD = convert_to_windows(trainD), convert_to_windows(testD)
+	if model.name in ['USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN']: 
+		trainD, testD = convert_to_windows(trainD, model), convert_to_windows(testD, model)
 
 	### Training phase
-	print(f'Training {args.model} on {args.dataset}')
-	num_epochs = 0 if args.test else 5; e = epoch + 1
-	for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
-		lossT, lr = backprop(e, model, trainD, optimizer, scheduler)
-		accuracy_list.append((lossT, lr))
-	save_model(model, optimizer, scheduler, e, accuracy_list)
-	plot_accuracies(accuracy_list, f'{args.model}_{args.dataset}')
+	if not args.test:
+		print(f'Training {args.model} on {args.dataset}')
+		num_epochs = 5; e = epoch + 1
+		for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
+			lossT, lr = backprop(e, model, trainD, optimizer, scheduler)
+			accuracy_list.append((lossT, lr))
+		save_model(model, optimizer, scheduler, e, accuracy_list)
+		plot_accuracies(accuracy_list, f'{args.model}_{args.dataset}')
 
 	### Testing phase
 	torch.zero_grad = True

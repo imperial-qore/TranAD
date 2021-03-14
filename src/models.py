@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import pickle
+import dgl
+from dgl.nn import GATConv
+from src.dlutils import *
 from src.constants import *
 torch.manual_seed(1)
 
@@ -99,22 +102,22 @@ class USAD(nn.Module):
 		self.n_feats = feats
 		self.n_hidden = 16
 		self.n_latent = 5
-		self.n_window = w_size
+		self.n_window = 5 # USAD w_size = 5
 		self.n = self.n_feats * self.n_window
 		self.encoder = nn.Sequential(
 			nn.Flatten(),
-			nn.Linear(self.n, self.n_hidden), nn.ReLU(),
-			nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(),
-			nn.Linear(self.n_hidden, self.n_latent), nn.ReLU(),
+			nn.Linear(self.n, self.n_hidden), nn.ReLU(True),
+			nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(True),
+			nn.Linear(self.n_hidden, self.n_latent), nn.ReLU(True),
 		)
 		self.decoder1 = nn.Sequential(
-			nn.Linear(self.n_latent,self.n_hidden), nn.ReLU(),
-			nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(),
+			nn.Linear(self.n_latent,self.n_hidden), nn.ReLU(True),
+			nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(True),
 			nn.Linear(self.n_hidden, self.n), nn.Sigmoid(),
 		)
 		self.decoder2 = nn.Sequential(
-			nn.Linear(self.n_latent,self.n_hidden), nn.ReLU(),
-			nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(),
+			nn.Linear(self.n_latent,self.n_hidden), nn.ReLU(True),
+			nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(True),
 			nn.Linear(self.n_hidden, self.n), nn.Sigmoid(),
 		)
 
@@ -128,3 +131,95 @@ class USAD(nn.Module):
 		ae2ae1 = self.decoder2(self.encoder(ae1))
 		return ae1.view(-1), ae2.view(-1), ae2ae1.view(-1)
 
+## MSCRED Model (AAAI 19)
+class MSCRED(nn.Module):
+	def __init__(self, feats):
+		super(MSCRED, self).__init__()
+		self.name = 'MSCRED'
+		self.lr = 0.0001
+		self.n_feats = feats
+		self.n_window = feats
+		self.encoder = nn.ModuleList([
+			ConvLSTM(1, 32, (3, 3), 1, True, True, False),
+			ConvLSTM(32, 64, (3, 3), 1, True, True, False),
+			ConvLSTM(64, 128, (3, 3), 1, True, True, False),
+			]
+		)
+		self.decoder = nn.Sequential(
+			nn.ConvTranspose2d(128, 64, (3, 3), 1, 1), nn.ReLU(True),
+			nn.ConvTranspose2d(64, 32, (3, 3), 1, 1), nn.ReLU(True),
+			nn.ConvTranspose2d(32, 1, (3, 3), 1, 1), nn.Sigmoid(),
+		)
+
+	def forward(self, g):
+		## Encode
+		z = g.view(1, 1, self.n_feats, self.n_window)
+		for cell in self.encoder:
+			_, z = cell(z.view(1, *z.shape))
+			z = z[0][0]
+		## Decode
+		x = self.decoder(z)
+		return x.view(-1)
+
+## MTAD_GAT Model (ICDM 20)
+class MTAD_GAT(nn.Module):
+	def __init__(self, feats):
+		super(MTAD_GAT, self).__init__()
+		self.name = 'MTAD_GAT'
+		self.lr = 0.0001
+		self.n_feats = feats
+		self.n_window = feats
+		self.n_hidden = feats * feats
+		self.g = dgl.graph((torch.tensor(list(range(1, feats+1))), torch.tensor([0]*feats)))
+		self.g = dgl.add_self_loop(self.g)
+		self.feature_gat = GATConv(1, feats, feats)
+		self.time_gat = GATConv(1, feats, 1)
+		self.gru = nn.GRU((feats+1)*feats*(2*feats+1), feats*feats, 2)
+
+	def forward(self, data, hidden):
+		hidden = torch.rand(2, 1, self.n_hidden, dtype=torch.float64) if hidden is not None else hidden
+		data = data.view(self.n_window, self.n_feats)
+		data_r = torch.cat((torch.zeros(1), data[-1])).view(-1, 1)
+		feat_r = self.feature_gat(self.g, data_r)
+		time_outputs = []
+		for i in range(self.n_feats):
+			data_t = torch.cat((torch.zeros(1), data[:][i])).view(-1, 1)
+			time_r = self.time_gat(self.g, data_t)
+			time_outputs.append(time_r)
+		time_r = torch.cat(time_outputs, dim=1)
+		data = torch.cat((torch.zeros(1, self.n_feats), data))
+		data = data.view(self.n_window+1, self.n_feats, 1)
+		x = torch.cat((data, feat_r, time_r), dim=2).view(1, 1, -1)
+		x, h = self.gru(x, hidden)
+		return x.view(-1), h
+
+# MAD_GAN (ICANN 19)
+class MAD_GAN(nn.Module):
+	def __init__(self, feats):
+		super(MAD_GAN, self).__init__()
+		self.name = 'MAD_GAN'
+		self.lr = 0.0001
+		self.n_feats = feats
+		self.n_hidden = 16
+		self.n_window = 5 # MAD_GAN w_size = 5
+		self.n = self.n_feats * self.n_window
+		self.generator = nn.Sequential(
+			nn.Flatten(),
+			nn.Linear(self.n, self.n_hidden), nn.LeakyReLU(True),
+			nn.Linear(self.n_hidden, self.n_hidden), nn.LeakyReLU(True),
+			nn.Linear(self.n_hidden, self.n), nn.Sigmoid(),
+		)
+		self.discriminator = nn.Sequential(
+			nn.Flatten(),
+			nn.Linear(self.n, self.n_hidden), nn.LeakyReLU(True),
+			nn.Linear(self.n_hidden, self.n_hidden), nn.LeakyReLU(True),
+			nn.Linear(self.n_hidden, 1), nn.Sigmoid(),
+		)
+
+	def forward(self, g):
+		## Generate
+		z = self.generator(g.view(1,-1))
+		## Discriminator
+		real_score = self.discriminator(g.view(1,-1))
+		fake_score = self.discriminator(z.view(1,-1))
+		return z.view(-1), real_score.view(-1), fake_score.view(-1)
