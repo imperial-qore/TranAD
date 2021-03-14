@@ -211,9 +211,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, bs, feats)
 				z = model(window, elem)
-			print(z.shape, elem.shape)
 			loss = l(z, elem)[0]
-			print(loss.detach().numpy().shape)
 			return loss.detach().numpy(), z.detach().numpy()[0]
 	else:
 		y_pred = model(data)
