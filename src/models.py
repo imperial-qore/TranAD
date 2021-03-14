@@ -226,12 +226,13 @@ class MAD_GAN(nn.Module):
 		fake_score = self.discriminator(z.view(1,-1))
 		return z.view(-1), real_score.view(-1), fake_score.view(-1)
 
+# Proposed Model (ICDM 21)
 class ProTran(nn.Module):
 	def __init__(self, feats):
 		super(ProTran, self).__init__()
 		self.name = 'ProTran'
 		self.lr = 0.0001
-		self.batch = 64
+		self.batch = 128
 		self.n_feats = feats
 		self.n_window = 10
 		self.n = self.n_feats * self.n_window
