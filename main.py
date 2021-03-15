@@ -52,7 +52,7 @@ def load_model(modelname, dims):
 	model_class = getattr(src.models, modelname)
 	model = model_class(dims).double()
 	optimizer = torch.optim.AdamW(model.parameters() , lr=model.lr, weight_decay=1e-5)
-	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.8)
+	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.9)
 	fname = f'checkpoints/{args.model}_{args.dataset}/model.ckpt'
 	if os.path.exists(fname) and not args.retrain:
 		print(f"{color.GREEN}Loading pre-trained model: {model.name}{color.ENDC}")
@@ -101,12 +101,13 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			for d in data:
 				ae1s, ae2s, ae2ae1s = model(d)
 				l1 = (1 / n) * l(ae1s, d) + (1 - 1/n) * l(ae2ae1s, d)
-				l2 = (1 / n) * l(ae2s, d) + (1 - 1/n) * l(ae2ae1s, d)
+				l2 = (1 / n) * l(ae2s, d) - (1 - 1/n) * l(ae2ae1s, d)
 				l1s.append(torch.mean(l1).item()); l2s.append(torch.mean(l2).item())
 				loss = torch.mean(l1 + l2)
 				optimizer.zero_grad()
 				loss.backward()
 				optimizer.step()
+			scheduler.step()
 			tqdm.write(f'Epoch {epoch},\tL1 = {np.mean(l1s)},\tL2 = {np.mean(l2s)}')
 			return np.mean(l1s)+np.mean(l2s), optimizer.param_groups[0]['lr']
 		else:
@@ -198,12 +199,14 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, local_bs, feats)
 				z = model(window, elem)
-				l1 = l(z, elem)
+				l1 = l(z, elem) if '2' not in model.name else (1 / n) * l(z[0], elem) + (1 - 1/n) * l(z[1], elem)
+				if '2' in model.name: z = z[1]
 				l1s.append(torch.mean(l1).item())
 				loss = torch.mean(l1)
 				optimizer.zero_grad()
 				loss.backward(retain_graph=True)
 				optimizer.step()
+			scheduler.step()
 			tqdm.write(f'Epoch {epoch},\tL1 = {np.mean(l1s)}')
 			return np.mean(l1s), optimizer.param_groups[0]['lr']
 		else:
@@ -211,6 +214,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, bs, feats)
 				z = model(window, elem)
+				if '2' in model.name: z = z[1]
 			loss = l(z, elem)[0]
 			return loss.detach().numpy(), z.detach().numpy()[0]
 	else:
@@ -233,12 +237,12 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	trainO, testO = trainD, testD
-	if model.name in ['USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN', 'ProTran']: 
+	if model.name in ['USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN', 'ProTran', 'ProTran1', 'ProTran2']: 
 		trainD, testD = convert_to_windows(trainD, model), convert_to_windows(testD, model)
 
 	### Training phase
 	if not args.test:
-		print(f'Training {args.model} on {args.dataset}')
+		print(f'{color.HEADER}Training {args.model} on {args.dataset}{color.ENDC}')
 		num_epochs = 5; e = epoch + 1
 		for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
 			lossT, lr = backprop(e, model, trainD, trainO, optimizer, scheduler)
@@ -249,7 +253,7 @@ if __name__ == '__main__':
 	### Testing phase
 	torch.zero_grad = True
 	model.eval()
-	print(f'Testing {args.model} on {args.dataset}')
+	print(f'{color.HEADER}Testing {args.model} on {args.dataset}{color.ENDC}')
 	loss, y_pred = backprop(0, model, testD, testO, optimizer, scheduler, training=False)
 
 	### Plot curves

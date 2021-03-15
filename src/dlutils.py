@@ -225,7 +225,6 @@ class TransformerEncoderLayer(nn.Module):
         src = src + self.dropout2(src2)
         return src
 
-
 class TransformerDecoderLayer(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward=16, dropout=0):
         super(TransformerDecoderLayer, self).__init__()
