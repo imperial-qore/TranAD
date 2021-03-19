@@ -26,6 +26,12 @@ def plot_accuracies(accuracy_list, folder):
 	plt.savefig(f'plots/{folder}/training-graph.pdf')
 	plt.clf()
 
+def cut_array(percentage, arr):
+	print(f'{color.BOLD}Slicing dataset to {int(percentage*100)}%{color.ENDC}')
+	mid = round(arr.shape[0] / 2)
+	window = round(arr.shape[0] * percentage * 0.5)
+	return arr[mid - window : mid + window, :]
+
 def getresults2(df, result):
 	results2, df1, df2 = {}, df.sum(), df.mean()
 	for a in ['FN', 'FP', 'TP', 'TN']:

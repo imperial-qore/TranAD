@@ -19,4 +19,7 @@ parser.add_argument('--test',
 parser.add_argument('--retrain', 
 					action='store_true', 
 					help="retrain the model")
+parser.add_argument('--less', 
+					action='store_true', 
+					help="train using less data")
 args = parser.parse_args()
