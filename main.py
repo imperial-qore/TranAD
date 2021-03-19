@@ -8,6 +8,7 @@ from src.constants import *
 from src.plotting import *
 from src.pot import *
 from src.utils import *
+from src.diagnosis import *
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch.nn as nn
 from pprint import pprint
@@ -31,7 +32,7 @@ def load_dataset(dataset):
 		if dataset == 'MSL': file = 'C-1_' + file
 		loader.append(np.load(os.path.join(folder, f'{file}.npy')))
 	# loader = [i[:, 1:2] for i in loader]
-	if args.less: loader[0] = cut_array(0.2, loader[0])
+	if args.less: loader[0] = cut_array(0.5, loader[0])
 	train_loader = DataLoader(loader[0], batch_size=loader[0].shape[0])
 	test_loader = DataLoader(loader[1], batch_size=loader[1].shape[0])
 	labels = loader[2]
@@ -271,6 +272,8 @@ if __name__ == '__main__':
 	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
 	labelsFinal = (np.sum(labels, axis=1) >= 1) + 0
 	result = pot_eval(lossTfinal, lossFinal, labelsFinal, args.dataset)
+	result.update(hit_att(loss, labels))
+	result.update(ndcg(loss, labels))
 	print(df)
 	pprint(result)
 	# pprint(getresults2(df, result))
