@@ -1,0 +1,159 @@
+{
+  "StorageAccount": "shreshthstorage",
+  "ladCfg": {
+    "diagnosticMonitorConfiguration": {
+      "eventVolume": "Medium",
+      "metrics": {
+        "metricAggregation": [
+          {
+            "scheduledTransferPeriod": "PT1M"
+          }
+        ],
+        "resourceId": "vm1"
+      },
+      "performanceCounters": {
+        "performanceCounterConfiguration": [
+          {
+            "annotation": [
+              {
+                "displayName": "Disk writes",
+                "locale": "en-us"
+              }
+            ],
+            "class": "disk",
+            "condition": "IsAggregate=TRUE",
+            "counter": "writespersecond",
+            "counterSpecifier": "/builtin/disk/writespersecond",
+            "type": "builtin",
+            "unit": "CountPerSecond"
+          },
+          {
+            "annotation": [
+              {
+                "displayName": "Disk reads",
+                "locale": "en-us"
+              }
+            ],
+            "class": "disk",
+            "condition": "IsAggregate=TRUE",
+            "counter": "readspersecond",
+            "counterSpecifier": "/builtin/disk/readspersecond",
+            "type": "builtin",
+            "unit": "CountPerSecond"
+          },
+          {
+            "annotation": [
+              {
+                "displayName": "Packets sent",
+                "locale": "en-us"
+              }
+            ],
+            "class": "network",
+            "counter": "packetstransmitted",
+            "counterSpecifier": "/builtin/network/packetstransmitted",
+            "type": "builtin",
+            "unit": "Count"
+          },
+          {
+            "annotation": [
+              {
+                "displayName": "Packets received",
+                "locale": "en-us"
+              }
+            ],
+            "class": "network",
+            "counter": "packetsreceived",
+            "counterSpecifier": "/builtin/network/packetsreceived",
+            "type": "builtin",
+            "unit": "Count"
+          },
+          {
+            "annotation": [
+              {
+                "displayName": "Filesystem % used space",
+                "locale": "en-us"
+              }
+            ],
+            "class": "filesystem",
+            "condition": "IsAggregate=TRUE",
+            "counter": "percentusedspace",
+            "counterSpecifier": "/builtin/filesystem/percentusedspace",
+            "type": "builtin",
+            "unit": "Percent"
+          },
+          {
+            "annotation": [
+              {
+                "displayName": "CPU percentage guest OS",
+                "locale": "en-us"
+              }
+            ],
+            "class": "processor",
+            "condition": "IsAggregate=TRUE",
+            "counter": "percentprocessortime",
+            "counterSpecifier": "/builtin/processor/percentprocessortime",
+            "type": "builtin",
+            "unit": "Percent"
+          },
+          {
+            "annotation": [
+              {
+                "displayName": "Swap percent used",
+                "locale": "en-us"
+              }
+            ],
+            "class": "memory",
+            "counter": "percentusedswap",
+            "counterSpecifier": "/builtin/memory/percentusedswap",
+            "type": "builtin",
+            "unit": "Percent"
+          },
+          {
+            "annotation": [
+              {
+                "displayName": "Memory percentage",
+                "locale": "en-us"
+              }
+            ],
+            "class": "memory",
+            "counter": "percentusedmemory",
+            "counterSpecifier": "/builtin/memory/percentusedmemory",
+            "type": "builtin",
+            "unit": "Percent"
+          },
+          {
+            "annotation": [
+              {
+                "displayName": "Page reads",
+                "locale": "en-us"
+              }
+            ],
+            "class": "memory",
+            "counter": "pagesreadpersec",
+            "counterSpecifier": "/builtin/memory/pagesreadpersec",
+            "type": "builtin",
+            "unit": "CountPerSecond"
+          },
+          {
+            "annotation": [
+              {
+                "displayName": "Page writes",
+                "locale": "en-us"
+              }
+            ],
+            "class": "memory",
+            "counter": "pageswrittenpersec",
+            "counterSpecifier": "/builtin/memory/pageswrittenpersec",
+            "type": "builtin",
+            "unit": "CountPerSecond"
+          }
+        ]
+      },
+      "syslogEvents": {
+        "syslogEventConfiguration": {
+        }
+      }
+    },
+    "sampleRateInSeconds": 15
+  }
+}
