@@ -11,7 +11,7 @@ lm_d = {
 		'SMAP': (0.97, 1),
 		'MSL': (0.97, 1),
 		'WADI': (0.99, 1),
-		'MSDS': (0.995, 1)
+		'MSDS': (0.91, 1)
 	}
 lm = lm_d[args.dataset]
 
