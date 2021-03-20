@@ -1,2 +1,2 @@
 # AnomalyDetection
-Anomaly Detection using Transformers and Few-Shot learning
+Anomaly Detection using Transformers, self-conditioning and adversarial training.
