@@ -231,7 +231,7 @@ class ProTran(nn.Module):
 	def __init__(self, feats):
 		super(ProTran, self).__init__()
 		self.name = 'ProTran'
-		self.lr = 0.0001
+		self.lr = lr
 		self.batch = 128
 		self.n_feats = feats
 		self.n_window = 10
@@ -256,7 +256,7 @@ class ProTran1(nn.Module):
 	def __init__(self, feats):
 		super(ProTran1, self).__init__()
 		self.name = 'ProTran1'
-		self.lr = 0.0001
+		self.lr = lr
 		self.batch = 128
 		self.n_feats = feats
 		self.n_window = 10
@@ -292,7 +292,7 @@ class ProTran2(nn.Module):
 	def __init__(self, feats):
 		super(ProTran2, self).__init__()
 		self.name = 'ProTran2'
-		self.lr = 0.0001
+		self.lr = lr
 		self.batch = 128
 		self.n_feats = feats
 		self.n_window = 10

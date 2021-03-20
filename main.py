@@ -2,7 +2,6 @@ import pickle
 import os
 import pandas as pd
 from tqdm import tqdm
-from src.parser import *
 from src.models import *
 from src.constants import *
 from src.plotting import *
@@ -31,7 +30,7 @@ def load_dataset(dataset):
 		if dataset == 'SMAP': file = 'P-1_' + file
 		if dataset == 'MSL': file = 'C-1_' + file
 		loader.append(np.load(os.path.join(folder, f'{file}.npy')))
-	# loader = [i[:, 1:2] for i in loader]
+	# loader = [i[:, debug:debug+1] for i in loader]
 	if args.less: loader[0] = cut_array(0.5, loader[0])
 	train_loader = DataLoader(loader[0], batch_size=loader[0].shape[0])
 	test_loader = DataLoader(loader[1], batch_size=loader[1].shape[0])
@@ -267,11 +266,13 @@ if __name__ == '__main__':
 	lossT, _ = backprop(0, model, trainD, trainO, optimizer, scheduler, training=False)
 	for i in range(loss.shape[1]):
 		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
-		result = pot_eval(lt, l, ls, args.dataset)
+		result, pred = pot_eval(lt, l, ls); preds.append(pred)
 		df = df.append(result, ignore_index=True)
+	# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
+	# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
 	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
 	labelsFinal = (np.sum(labels, axis=1) >= 1) + 0
-	result = pot_eval(lossTfinal, lossFinal, labelsFinal, args.dataset)
+	result, _ = pot_eval(lossTfinal, lossFinal, labelsFinal)
 	result.update(hit_att(loss, labels))
 	result.update(ndcg(loss, labels))
 	print(df)
