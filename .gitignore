@@ -5,6 +5,9 @@ __pycache__/
 processed/
 plots/
 checkpoints/
+data/MSDS/metrics
+data/MSDS/train.csv
+data/MSDS/test.csv
 
 # C extensions
 *.so

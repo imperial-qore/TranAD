@@ -6,7 +6,7 @@ import pickle
 from src.constants import *
 from shutil import copyfile
 
-datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI']
+datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI', 'MSDS']
 
 wadi_drop = ['2_LS_001_AL', '2_LS_002_AL','2_P_001_STATUS','2_P_002_STATUS']
 
@@ -35,6 +35,10 @@ def normalize(a):
 
 def normalize2(a, min_a = None, max_a = None):
 	if min_a is None: min_a, max_a = min(a), max(a)
+	return (a - min_a) / (max_a - min_a), min_a, max_a
+
+def normalize3(a, min_a = None, max_a = None):
+	if min_a is None: min_a, max_a = np.min(a, axis = 0), np.max(a, axis = 0)
 	return (a - min_a) / (max_a - min_a), min_a, max_a
 
 def convertNumpy(df):
@@ -68,6 +72,17 @@ def load_data(dataset):
 				load_and_save('train', filename, filename.strip('.txt'), dataset_folder)
 				s = load_and_save('test', filename, filename.strip('.txt'), dataset_folder)
 				load_and_save2('labels', filename, filename.strip('.txt'), dataset_folder, s)
+	elif dataset == 'MSDS':
+		dataset_folder = 'data/MSDS'
+		df_train = pd.read_csv(os.path.join(dataset_folder, 'train.csv'))
+		df_test  = pd.read_csv(os.path.join(dataset_folder, 'test.csv'))
+		df_train, df_test = df_train.values[:, 1:], df_test.values[:, 1:]
+		train, min_a, max_a = normalize3(df_train)
+		test, _, _ = normalize3(df_test, min_a, max_a)
+		labels = pd.read_csv(os.path.join(dataset_folder, 'labels.csv'))
+		labels = labels.values[:, 1:]
+		for file in ['train', 'test', 'labels']:
+			np.save(os.path.join(folder, f'{file}.npy'), eval(file).astype('float64'))
 	elif dataset == 'SWaT':
 		dataset_folder = 'data/SWaT'
 		file = os.path.join(dataset_folder, 'series.json')
