@@ -1,7 +1,7 @@
 # AnomalyDetection
 Anomaly Detection using Transformers, self-conditioning and adversarial training.
 
-## NOVELTY
+## Novelty
 
 1. transformer :
 	- parallelized quick training
@@ -20,7 +20,7 @@ Anomaly Detection using Transformers, self-conditioning and adversarial training
 
 
 
-## FIGURES AND COMPARISONS
+## Figures and Comparisons
 
 
 Model diagram (Figure) :
