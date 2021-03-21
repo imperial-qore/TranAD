@@ -17,7 +17,7 @@ def convert_to_windows(data, model):
 	for i, g in enumerate(data): 
 		if i >= w_size: w = data[i-w_size:i]
 		else: w = torch.cat([data[0].repeat(w_size-i, 1), data[0:i]])
-		windows.append(w if 'ProTran' in args.model else w.view(-1))
+		windows.append(w if 'ProTran' in args.model or 'Attention' in args.model else w.view(-1))
 	return torch.stack(windows)
 
 def load_dataset(dataset):
@@ -71,7 +71,34 @@ def load_model(modelname, dims):
 def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 	l = nn.MSELoss(reduction = 'mean' if training else 'none')
 	feats = dataO.shape[1]
-	if 'VAE' in model.name:
+	if 'Attention' in model.name:
+		l = nn.MSELoss(reduction = 'none')
+		n = epoch + 1; w_size = model.n_window
+		l1s = []; res = []
+		if training:
+			for d in data:
+				ae, ats = model(d)
+				# res.append(torch.mean(ats, axis=0).view(-1))
+				l1 = l(ae, d)
+				l1s.append(torch.mean(l1).item())
+				loss = torch.mean(l1)
+				optimizer.zero_grad()
+				loss.backward()
+				optimizer.step()
+			# res = torch.stack(res); np.save('ascores.npy', res.detach().numpy())
+			scheduler.step()
+			tqdm.write(f'Epoch {epoch},\tL1 = {np.mean(l1s)}')
+			return np.mean(l1s), optimizer.param_groups[0]['lr']
+		else:
+			ae1s, y_pred = [], []
+			for d in data: 
+				ae1 = model(d)
+				y_pred.append(ae1[-1])
+				ae1s.append(ae1)
+			ae1s, y_pred = torch.stack(ae1s), torch.stack(y_pred)
+			loss = torch.mean(l(ae1s, data), axis=1)
+			return loss.detach().numpy(), y_pred.detach().numpy()
+	elif 'VAE' in model.name:
 		if training:
 			mses, klds = [], []
 			for i, d in enumerate(data):
@@ -238,7 +265,7 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	trainO, testO = trainD, testD
-	if model.name in ['USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN', 'ProTran', 'ProTran1', 'ProTran2']: 
+	if model.name in ['Attention', 'USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN', 'ProTran', 'ProTran1', 'ProTran2']: 
 		trainD, testD = convert_to_windows(trainD, model), convert_to_windows(testD, model)
 
 	### Training phase
@@ -258,7 +285,7 @@ if __name__ == '__main__':
 	loss, y_pred = backprop(0, model, testD, testO, optimizer, scheduler, training=False)
 
 	### Plot curves
-	if not args.test:
+	if args.test:
 		plotter(f'{args.model}_{args.dataset}', testO, y_pred, loss, labels)
 
 	### Scores
