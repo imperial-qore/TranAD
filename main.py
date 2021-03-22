@@ -71,6 +71,32 @@ def load_model(modelname, dims):
 def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 	l = nn.MSELoss(reduction = 'mean' if training else 'none')
 	feats = dataO.shape[1]
+	if 'DAGMM' in model.name:
+		l = nn.MSELoss(reduction = 'none')
+		compute = ComputeLoss(model, 0.1, 0.005, 'cpu', model.n_gmm)
+		n = epoch + 1; w_size = model.n_window
+		l1s = []; l2s = []
+		if training:
+			for d in data:
+				_, x_hat, z, gamma = model(d)
+				l1, l2 = l(x_hat, d), l(gamma, d)
+				l1s.append(torch.mean(l1).item()); l2s.append(torch.mean(l2).item())
+				loss = torch.mean(l1) + torch.mean(l2)
+				optimizer.zero_grad()
+				loss.backward()
+				optimizer.step()
+			scheduler.step()
+			tqdm.write(f'Epoch {epoch},\tL1 = {np.mean(l1s)},\tL2 = {np.mean(l2s)}')
+			return np.mean(l1s)+np.mean(l2s), optimizer.param_groups[0]['lr']
+		else:
+			ae1s = []
+			for d in data: 
+				_, x_hat, _, _ = model(d)
+				ae1s.append(x_hat)
+			ae1s = torch.stack(ae1s)
+			y_pred = ae1s[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
+			loss = l(ae1s, data)[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
+			return loss.detach().numpy(), y_pred.detach().numpy()
 	if 'Attention' in model.name:
 		l = nn.MSELoss(reduction = 'none')
 		n = epoch + 1; w_size = model.n_window
@@ -265,7 +291,7 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	trainO, testO = trainD, testD
-	if model.name in ['Attention', 'USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN', 'ProTran', 'ProTran1', 'ProTran2']: 
+	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN', 'ProTran', 'ProTran1', 'ProTran2']: 
 		trainD, testD = convert_to_windows(trainD, model), convert_to_windows(testD, model)
 
 	### Training phase

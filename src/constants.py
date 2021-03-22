@@ -7,7 +7,7 @@ data_folder = 'data'
 lm_d = {
 		'SMD': (0.99995, 1.04), 
 		'synthetic': (0.999, 1),
-		'SWaT': (0.99, 1),
+		'SWaT': (0.993, 1),
 		'SMAP': (0.97, 1),
 		'MSL': (0.97, 1),
 		'WADI': (0.99, 1),
@@ -19,7 +19,7 @@ lm = lm_d[args.dataset]
 lr_d = {
 		'SMD': 0.0001, 
 		'synthetic': 0.0001, 
-		'SWaT': 0.0001, 
+		'SWaT': 0.003, 
 		'SMAP': 0.0001, 
 		'MSL': 0.0001, 
 		'WADI': 0.0001, 

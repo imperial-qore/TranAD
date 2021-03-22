@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.metrics import ndcg_score
+from src.constants import lm
 
 def hit_att(ascore, labels, ps = [100, 150]):
 	res = {}
@@ -26,7 +27,10 @@ def ndcg(ascore, labels, ps = [100, 150]):
 			labs = list(np.where(l == 1)[0])
 			if labs:
 				k_p = round(p * len(labs) / 100)
-				hit = ndcg_score(l.reshape(1, -1), a.reshape(1, -1), k = k_p)
+				try:
+					hit = ndcg_score(l.reshape(1, -1), a.reshape(1, -1), k = k_p)
+				except Exception as e:
+					return {}
 				ndcg_scores.append(hit)
 		res[f'NDCG@{p}%'] = np.mean(ndcg_scores)
 	return res
