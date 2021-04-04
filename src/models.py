@@ -122,11 +122,11 @@ class DAGMM(nn.Module):
 		gamma = self.estimate(z)
 		return z_c, x_hat.view(-1), z, gamma.view(-1)
 
-## LSTM_VAE Model (KDD 19)
-class LSTM_VAE(nn.Module):
+## OmniAnomaly Model (KDD 19)
+class OmniAnomaly(nn.Module):
 	def __init__(self, feats):
-		super(LSTM_VAE, self).__init__()
-		self.name = 'LSTM_VAE'
+		super(OmniAnomaly, self).__init__()
+		self.name = 'OmniAnomaly'
 		self.lr = 0.002
 		self.beta = 0.01
 		self.n_feats = feats

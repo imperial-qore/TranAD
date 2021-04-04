@@ -10,7 +10,9 @@ from src.utils import *
 from src.diagnosis import *
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch.nn as nn
+from time import time
 from pprint import pprint
+from beepy import beep
 
 def convert_to_windows(data, model):
 	windows = []; w_size = model.n_window
@@ -31,7 +33,7 @@ def load_dataset(dataset):
 		if dataset == 'MSL': file = 'C-1_' + file
 		loader.append(np.load(os.path.join(folder, f'{file}.npy')))
 	# loader = [i[:, debug:debug+1] for i in loader]
-	if args.less: loader[0] = cut_array(0.5, loader[0])
+	if args.less: loader[0] = cut_array(0.2, loader[0])
 	train_loader = DataLoader(loader[0], batch_size=loader[0].shape[0])
 	test_loader = DataLoader(loader[1], batch_size=loader[1].shape[0])
 	labels = loader[2]
@@ -124,7 +126,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			ae1s, y_pred = torch.stack(ae1s), torch.stack(y_pred)
 			loss = torch.mean(l(ae1s, data), axis=1)
 			return loss.detach().numpy(), y_pred.detach().numpy()
-	elif 'VAE' in model.name:
+	elif 'OmniAnomaly' in model.name:
 		if training:
 			mses, klds = [], []
 			for i, d in enumerate(data):
@@ -297,10 +299,11 @@ if __name__ == '__main__':
 	### Training phase
 	if not args.test:
 		print(f'{color.HEADER}Training {args.model} on {args.dataset}{color.ENDC}')
-		num_epochs = 5; e = epoch + 1
+		num_epochs = 5; e = epoch + 1; start = time()
 		for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
 			lossT, lr = backprop(e, model, trainD, trainO, optimizer, scheduler)
 			accuracy_list.append((lossT, lr))
+		print(color.BOLD+'Training time: '+"{:10.4f}".format(time()-start)+' s'+color.ENDC)
 		save_model(model, optimizer, scheduler, e, accuracy_list)
 		plot_accuracies(accuracy_list, f'{args.model}_{args.dataset}')
 
@@ -311,7 +314,7 @@ if __name__ == '__main__':
 	loss, y_pred = backprop(0, model, testD, testO, optimizer, scheduler, training=False)
 
 	### Plot curves
-	if args.test:
+	if not args.test:
 		plotter(f'{args.model}_{args.dataset}', testO, y_pred, loss, labels)
 
 	### Scores
@@ -331,3 +334,4 @@ if __name__ == '__main__':
 	print(df)
 	pprint(result)
 	# pprint(getresults2(df, result))
+	# beep(4)

@@ -32,6 +32,10 @@ Anomaly Detection using Transformers, self-conditioning and adversarial training
 - Visualization of attention score (Plot) :
 	- Truncated (say 5 dimension time-series data) with colormap of attention scores for each dimension (like github)
 
+- Visualization of encodings (Plot) : (like in AAAI 2021 paper)
+	- Plot of ground truth, prediction, label, anomaly score with tSNE
+	- tSNE plot of embeddings on SMD dataset for different time-series dimensions.
+
 - Dataset Statistics (Table) :
 	- Dimension
 	- Size (training and testing)
@@ -53,6 +57,9 @@ Anomaly Detection using Transformers, self-conditioning and adversarial training
 - Diagnosis (Table) [2] :
 	- complete datasets - NDCG@5, HitRate@100%, HitRate@150%
 	- partial datasets  - NDCG@5, HitRate@100%, HitRate@150%
+
+- Scalability (Plot) [1] :
+	- F1 score and training time with increasing dataset size (20%, 40%, 60%, 80%, 100%)
 
 - Ablation (Table) [1, 2, 3, 4] :
 	- Detection, delay and diagnosis performance w/o MAML/self-conditioning/adversarial-training

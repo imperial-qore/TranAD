@@ -1,7 +1,5 @@
 from src.parser import *
-# Data folders
-output_folder = 'processed'
-data_folder = 'data'
+from src.folderconstants import *
 
 # Threshold parameters
 lm_d = {
@@ -9,7 +7,7 @@ lm_d = {
 		'synthetic': (0.999, 1),
 		'SWaT': (0.993, 1),
 		'SMAP': (0.97, 1),
-		'MSL': (0.97, 1),
+		'MSL': (0.99905, 1),
 		'WADI': (0.99, 1),
 		'MSDS': (0.91, 1)
 	}

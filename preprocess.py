@@ -3,7 +3,7 @@ import sys
 import pandas as pd
 import numpy as np
 import pickle
-from src.constants import *
+from src.folderconstants import *
 from shutil import copyfile
 
 datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI', 'MSDS']
@@ -39,7 +39,7 @@ def normalize2(a, min_a = None, max_a = None):
 
 def normalize3(a, min_a = None, max_a = None):
 	if min_a is None: min_a, max_a = np.min(a, axis = 0), np.max(a, axis = 0)
-	return (a - min_a) / (max_a - min_a), min_a, max_a
+	return (a - min_a) / (max_a - min_a + 0.0001), min_a, max_a
 
 def convertNumpy(df):
 	x = df[df.columns[3:]].values[::10, :]
@@ -101,9 +101,12 @@ def load_data(dataset):
 		values = values[values['spacecraft'] == dataset]
 		filenames = values['chan_id'].values.tolist()
 		for fn in filenames:
-			copyfile(f'{dataset_folder}/train/{fn}.npy', f'{folder}/{fn}_train.npy')
+			train = np.load(f'{dataset_folder}/train/{fn}.npy')
 			test = np.load(f'{dataset_folder}/test/{fn}.npy')
-			copyfile(f'{dataset_folder}/test/{fn}.npy', f'{folder}/{fn}_test.npy')
+			train, min_a, max_a = normalize3(train)
+			test, _, _ = normalize3(test, min_a, max_a)
+			np.save(f'{folder}/{fn}_train.npy', train)
+			np.save(f'{folder}/{fn}_test.npy', test)
 			labels = np.zeros(test.shape)
 			indices = values[values['chan_id'] == fn]['anomaly_sequences'].values[0]
 			indices = indices.replace(']', '').replace('[', '').split(', ')
