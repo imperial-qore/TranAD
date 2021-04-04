@@ -328,10 +328,10 @@ class MAD_GAN(nn.Module):
 		return z.view(-1), real_score.view(-1), fake_score.view(-1)
 
 # Proposed Model (ICDM 21)
-class ProTran(nn.Module):
+class TranAD(nn.Module):
 	def __init__(self, feats):
-		super(ProTran, self).__init__()
-		self.name = 'ProTran'
+		super(TranAD, self).__init__()
+		self.name = 'TranAD'
 		self.lr = lr
 		self.batch = 128
 		self.n_feats = feats
@@ -339,9 +339,9 @@ class ProTran(nn.Module):
 		self.n = self.n_feats * self.n_window
 		self.pos_encoder = PositionalEncoding(feats, 0.1, self.n_window)
 		encoder_layers = TransformerEncoderLayer(d_model=feats, nhead=feats, dim_feedforward=16, dropout=0.1)
-		self.transformer_encoder = TransformerEncoder(encoder_layers, 2)
+		self.transformer_encoder = TransformerEncoder(encoder_layers, 1)
 		decoder_layers = TransformerDecoderLayer(d_model=feats, nhead=feats, dim_feedforward=16, dropout=0.1)
-		self.transformer_decoder = TransformerDecoder(decoder_layers, 2)
+		self.transformer_decoder = TransformerDecoder(decoder_layers, 1)
 		self.fcn = nn.Sigmoid()
 
 	def forward(self, src, tgt):
@@ -353,10 +353,10 @@ class ProTran(nn.Module):
 		return x
 
 # Proposed Model + Self Conditioning (ICDM 21)
-class ProTran1(nn.Module):
+class TranAD1(nn.Module):
 	def __init__(self, feats):
-		super(ProTran1, self).__init__()
-		self.name = 'ProTran1'
+		super(TranAD1, self).__init__()
+		self.name = 'TranAD1'
 		self.lr = lr
 		self.batch = 128
 		self.n_feats = feats
@@ -364,9 +364,9 @@ class ProTran1(nn.Module):
 		self.n = self.n_feats * self.n_window
 		self.pos_encoder = PositionalEncoding(2 * feats, 0.1, self.n_window)
 		encoder_layers = TransformerEncoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=16, dropout=0.1)
-		self.transformer_encoder = TransformerEncoder(encoder_layers, 2)
+		self.transformer_encoder = TransformerEncoder(encoder_layers, 1)
 		decoder_layers = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=16, dropout=0.1)
-		self.transformer_decoder = TransformerDecoder(decoder_layers, 2)
+		self.transformer_decoder = TransformerDecoder(decoder_layers, 1)
 		self.fcn = nn.Sequential(nn.Linear(2 * feats, feats), nn.Sigmoid())
 
 	def encode_decode(self, src, c, tgt):
@@ -389,10 +389,10 @@ class ProTran1(nn.Module):
 		return x
 
 # Proposed Model + Self Conditioning + Adversarial (ICDM 21)
-class ProTran2(nn.Module):
+class TranAD2(nn.Module):
 	def __init__(self, feats):
-		super(ProTran2, self).__init__()
-		self.name = 'ProTran2'
+		super(TranAD2, self).__init__()
+		self.name = 'TranAD2'
 		self.lr = lr
 		self.batch = 128
 		self.n_feats = feats
@@ -400,11 +400,11 @@ class ProTran2(nn.Module):
 		self.n = self.n_feats * self.n_window
 		self.pos_encoder = PositionalEncoding(2 * feats, 0.1, self.n_window)
 		encoder_layers = TransformerEncoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=16, dropout=0.1)
-		self.transformer_encoder = TransformerEncoder(encoder_layers, 2)
+		self.transformer_encoder = TransformerEncoder(encoder_layers, 1)
 		decoder_layers1 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=16, dropout=0.1)
-		self.transformer_decoder1 = TransformerDecoder(decoder_layers1, 2)
+		self.transformer_decoder1 = TransformerDecoder(decoder_layers1, 1)
 		decoder_layers2 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=16, dropout=0.1)
-		self.transformer_decoder2 = TransformerDecoder(decoder_layers2, 2)
+		self.transformer_decoder2 = TransformerDecoder(decoder_layers2, 1)
 		self.fcn = nn.Sequential(nn.Linear(2 * feats, feats), nn.Sigmoid())
 
 	def encode(self, src, c, tgt):

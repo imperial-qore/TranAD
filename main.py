@@ -19,7 +19,7 @@ def convert_to_windows(data, model):
 	for i, g in enumerate(data): 
 		if i >= w_size: w = data[i-w_size:i]
 		else: w = torch.cat([data[0].repeat(w_size-i, 1), data[0:i]])
-		windows.append(w if 'ProTran' in args.model or 'Attention' in args.model else w.view(-1))
+		windows.append(w if 'TranAD' in args.model or 'Attention' in args.model else w.view(-1))
 	return torch.stack(windows)
 
 def load_dataset(dataset):
@@ -242,7 +242,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			loss = l(outputs, data)
 			loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
 			return loss.detach().numpy(), y_pred.detach().numpy()
-	elif 'ProTran' in model.name:
+	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
 		data_x = torch.DoubleTensor(data); dataset = TensorDataset(data_x, data_x)
 		bs = model.batch if training else len(data)
@@ -293,7 +293,7 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	trainO, testO = trainD, testD
-	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'ProTran', 'ProTran1', 'ProTran2']: 
+	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'TranAD', 'TranAD1', 'TranAD2']: 
 		trainD, testD = convert_to_windows(trainD, model), convert_to_windows(testD, model)
 
 	### Training phase

@@ -126,9 +126,14 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02):
     Returns:
         dict: pot result dict
     """
-    s = SPOT(q)  # SPOT object
-    s.fit(init_score, score)  # data import
-    s.initialize(level=lm[0], min_extrema=False, verbose=False)  # initialization step
+    lms = lm[0]
+    while True:
+        try:
+            s = SPOT(q)  # SPOT object
+            s.fit(init_score, score)  # data import
+            s.initialize(level=lms, min_extrema=False, verbose=False)  # initialization step
+        except: lms = lms * 0.999
+        else: break
     ret = s.run(dynamic=False)  # run
     # print(len(ret['alarms']))
     # print(len(ret['thresholds']))
