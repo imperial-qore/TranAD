@@ -174,7 +174,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			loss = 0.1 * l(ae1s, data) + 0.9 * l(ae2ae1s, data)
 			loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
 			return loss.detach().numpy(), y_pred.detach().numpy()
-	elif 'MSCRED' in model.name or 'MTAD_GAT' in model.name:
+	elif model.name in ['GDN', 'MTAD_GAT', 'MSCRED']:
 		l = nn.MSELoss(reduction = 'none')
 		n = epoch + 1; w_size = model.n_window
 		l1s = []
@@ -291,7 +291,7 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	trainO, testO = trainD, testD
-	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'MTAD_GAT', 'MAD_GAN', 'ProTran', 'ProTran1', 'ProTran2']: 
+	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'ProTran', 'ProTran1', 'ProTran2']: 
 		trainD, testD = convert_to_windows(trainD, model), convert_to_windows(testD, model)
 
 	### Training phase
