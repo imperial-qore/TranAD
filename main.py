@@ -255,8 +255,8 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, local_bs, feats)
 				z = model(window, elem)
-				l1 = l(z, elem) if '2' not in model.name else (1 / n) * l(z[0], elem) + (1 - 1/n) * l(z[1], elem)
-				if '2' in model.name: z = z[1]
+				l1 = l(z, elem) if not isinstance(z, tuple) else (1 / n) * l(z[0], elem) + (1 - 1/n) * l(z[1], elem)
+				if isinstance(z, tuple): z = z[1]
 				l1s.append(torch.mean(l1).item())
 				loss = torch.mean(l1)
 				optimizer.zero_grad()
@@ -270,7 +270,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, bs, feats)
 				z = model(window, elem)
-				if '2' in model.name: z = z[1]
+				if isinstance(z, tuple): z = z[1]
 			loss = l(z, elem)[0]
 			return loss.detach().numpy(), z.detach().numpy()[0]
 	else:
@@ -293,7 +293,7 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 	trainO, testO = trainD, testD
-	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'TranAD', 'TranAD1', 'TranAD2']: 
+	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'GDN', 'MTAD_GAT', 'MAD_GAN'] or 'TranAD' in model.name: 
 		trainD, testD = convert_to_windows(trainD, model), convert_to_windows(testD, model)
 
 	### Training phase

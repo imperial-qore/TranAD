@@ -23,7 +23,7 @@ def plotter(name, y_true, y_pred, ascore, labels):
 		fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 		ax1.set_ylabel('Value')
 		ax1.set_title(f'Dimension = {dim}')
-		if dim == 0: np.save(f'true{dim}.npy', y_t); np.save(f'pred{dim}.npy', y_p); np.save(f'ascore{dim}.npy', a_s)
+		# if dim == 0: np.save(f'true{dim}.npy', y_t); np.save(f'pred{dim}.npy', y_p); np.save(f'ascore{dim}.npy', a_s)
 		ax1.plot(smooth(y_t), linewidth=0.2, label='True')
 		ax1.plot(smooth(y_p), '-', alpha=0.6, linewidth=0.3, label='Predicted')
 		ax3 = ax1.twinx()
