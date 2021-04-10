@@ -66,3 +66,4 @@ Anomaly Detection using Transformers, self-conditioning and adversarial training
 
 - Sensitivity Analysis (Plots) : (like in USAD paper)
 	- P, R, F1, F1\*, training time with learning rate, number of layers, window size, % anomalies, 
+	- F1 and training time with window size
