@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 processed/
-plots/
+plots_bak/
 checkpoints/
 data/MSDS/metrics
 data/MSDS/train.csv
