@@ -240,10 +240,10 @@ class MTAD_GAT(nn.Module):
 		self.g = dgl.add_self_loop(self.g)
 		self.feature_gat = GATConv(feats, 1, feats)
 		self.time_gat = GATConv(feats, 1, feats)
-		self.gru = nn.GRU((feats+1)*feats*3, feats*feats, 2)
+		self.gru = nn.GRU((feats+1)*feats*3, feats*feats, 1)
 
 	def forward(self, data, hidden):
-		hidden = torch.rand(2, 1, self.n_hidden, dtype=torch.float64) if hidden is not None else hidden
+		hidden = torch.rand(1, 1, self.n_hidden, dtype=torch.float64) if hidden is not None else hidden
 		data = data.view(self.n_window, self.n_feats)
 		data_r = torch.cat((torch.zeros(1, self.n_feats), data))
 		feat_r = self.feature_gat(self.g, data_r)
