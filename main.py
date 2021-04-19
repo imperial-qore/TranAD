@@ -196,7 +196,10 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 		else:
 			xs = []
 			for d in data: 
-				x = model(d)
+				if 'MTAD_GAT' in model.name: 
+					x, h = model(d, None)
+				else:
+					x = model(d)
 				xs.append(x)
 			xs = torch.stack(xs)
 			y_pred = xs[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
