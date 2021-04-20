@@ -280,7 +280,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 		y_pred = model(data)
 		loss = l(y_pred, data)
 		if training:
-			print(f'Epoch {epoch},\tMSE = {MSE}')
+			tqdm.write(f'Epoch {epoch},\tMSE = {loss}')
 			optimizer.zero_grad()
 			loss.backward()
 			optimizer.step()
