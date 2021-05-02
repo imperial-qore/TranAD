@@ -22,7 +22,6 @@ Anomaly Detection using Transformers, self-conditioning and adversarial training
 
 ## Figures and Comparisons
 
-
 - Model diagram (Figure) :
 	- Transformer model
 	- Two-phase inference 
