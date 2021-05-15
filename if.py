@@ -21,7 +21,7 @@ if __name__ == '__main__':
 	# 	p = (-p + 1) / 2; tp = (-tp + 1) / 2
 	# 	pred.append(p); tpred.append(tp)
 	# pred = np.array(pred).transpose(); tpred = np.array(tpred).transpose()
-	# pred, tpred = np.mean(pred, axis=1), np.mean(tpred, axis=1)
+	# pred, tpred = np.mean((-pred + 1) / 2, axis=1), np.mean((-tpred + 1) / 2, axis=1)
 	c = clf.fit(trainD.tolist())
 	pred, tpred = c.predict(testD.tolist()), c.predict(trainD.tolist())
 	pred = (-pred + 1) / 2; tpred = (-tpred + 1) / 2
