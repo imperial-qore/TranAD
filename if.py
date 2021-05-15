@@ -1,6 +1,6 @@
 from sklearn.ensemble import IsolationForest
 from main import *
-
+from tqdm import trange
 
 if __name__ == '__main__':
 	train_loader, test_loader, labels = load_dataset(args.dataset)
@@ -8,14 +8,20 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
 
-	### Training phase
-	clf = IsolationForest(random_state=0, n_estimators=100, max_features=1.0, bootstrap=True, verbose=True).fit(trainD.tolist())
-
-	### Testing phase
-	pred = clf.predict(testD.tolist())
-	pred = (pred + 1) / 2
+	### Training and Testing phase
+	clf = IsolationForest(random_state=0, n_estimators=10, max_features=1.0, bootstrap=False)
+	pred = []
+	for i in trange(trainD.shape[1]):
+		td = trainD[:, i].reshape(-1, 1)
+		c = clf.fit(td.tolist())
+		p = c.predict(testD[:, i].reshape(-1, 1).tolist())
+		p = (p + 1) / 2
+		pred.append(p)
+	pred = np.array(pred).transpose()
+	print(pred.shape)
 
 	### Scores
+	pred = (np.sum(pred, axis=1) >= 1) + 0
 	labelsFinal = (np.sum(labels, axis=1) >= 1) + 0
 	print(pred, labelsFinal)
 	p_t = calc_point2point(pred, labelsFinal)
