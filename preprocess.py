@@ -94,6 +94,14 @@ def load_data(dataset):
 		labels = pd.read_json(file, lines=True)[['noti']][7000:12000] + 0
 		for file in ['train', 'test', 'labels']:
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
+	elif dataset == 'HST':
+		dataset_folder = 'data/HST'
+		total = pd.read_csv(os.path.join(dataset_folder, 'dataset_01.txt'), delimiter=' ')
+		labels = total.iloc[:, :-2:-1].values
+		train, test = total.iloc[:, :-2], total.iloc[:, :-2]
+		labels = np.repeat(labels, test.shape[1], axis=1)
+		for file in ['train', 'test', 'labels']:
+			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
 	elif dataset in ['SMAP', 'MSL']:
 		dataset_folder = 'data/SMAP_MSL'
 		file = os.path.join(dataset_folder, 'labeled_anomalies.csv')

@@ -10,6 +10,7 @@ lm_d = {
 		'MSL': [(0.97, 1), (0.999, 1.04)],
 		'WADI': [(0.99, 1), (0.999, 1)],
 		'MSDS': [(0.91, 1), (0.9, 1.04)],
+		'HST': [(0.91, 1), (0.9, 1.04)],
 	}
 lm = lm_d[args.dataset][1 if 'TranAD' in args.model else 0]
 
@@ -22,6 +23,7 @@ lr_d = {
 		'MSL': 0.002, 
 		'WADI': 0.0001, 
 		'MSDS': 0.001, 
+		'HST': 0.001, 
 	}
 lr = lr_d[args.dataset]
 
