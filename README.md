@@ -18,11 +18,11 @@ pip3 install -r requirements.txt
 ## Result Reproduction
 To run a model on a dataset, run the following command:
 ```bash
-python3 main.py -model <model> -dataset <dataset> --retrain
+python3 main.py --model <model> --dataset <dataset> --retrain
 ```
 where `<model>` can be either of 'TranAD', 'GDN', 'MAD_GAN', 'MTAD_GAT', 'MSCRED', 'USAD', 'OmniAnomaly', 'LSTM_AD', and dataset can be one of 'SMAP', 'MSL', 'SWaT', 'WADI', 'SMD', 'MSDS'. To train with 20% data, use the following command 
 ```bash
-python3 main.py -model <model> -dataset <dataset> --retrain --less
+python3 main.py --model <model> --dataset <dataset> --retrain --less
 ```
 
 For ablation studies, use the following models: 'TranAD_SelfConditioning', 'TranAD_Adversarial', 'TranAD_Transformer', 'TranAD_Basic'.
