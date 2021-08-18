@@ -20,6 +20,7 @@ Preprocess all datasets using the command
 ```bash
 python3 preprocess.py SMAP MSL SWaT WADI MSDS SMD MSDS
 ```
+Distribution rights to some datasets may not be available. Check the readme files in the `./data/` folder for more details. 
 
 ## Result Reproduction
 To run a model on a dataset, run the following command:
