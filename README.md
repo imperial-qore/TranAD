@@ -15,6 +15,12 @@ pip3 install torch==1.8.1+cpu torchvision==0.9.1+cpu torchaudio===0.8.1 -f https
 pip3 install -r requirements.txt
 ```
 
+## Dataset Preprocessing
+Preprocess all datasets using the command
+```bash
+python3 preprocess.py SMAP MSL SWaT WADI MSDS SMD MSDS
+```
+
 ## Result Reproduction
 To run a model on a dataset, run the following command:
 ```bash
