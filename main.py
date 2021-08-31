@@ -31,6 +31,7 @@ def load_dataset(dataset):
 		if dataset == 'SMD': file = 'machine-1-1_' + file
 		if dataset == 'SMAP': file = 'P-1_' + file
 		if dataset == 'MSL': file = 'C-1_' + file
+		if dataset == 'UCR': file = '136_' + file
 		loader.append(np.load(os.path.join(folder, f'{file}.npy')))
 	# loader = [i[:, debug:debug+1] for i in loader]
 	if args.less: loader[0] = cut_array(0.2, loader[0])

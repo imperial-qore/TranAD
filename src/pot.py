@@ -2,7 +2,7 @@ import numpy as np
 
 from src.spot import SPOT
 from src.constants import *
-
+from sklearn.metrics import *
 
 def calc_point2point(predict, actual):
     """
@@ -18,7 +18,11 @@ def calc_point2point(predict, actual):
     precision = TP / (TP + FP + 0.00001)
     recall = TP / (TP + FN + 0.00001)
     f1 = 2 * precision * recall / (precision + recall + 0.00001)
-    return f1, precision, recall, TP, TN, FP, FN
+    try:
+        roc_auc = roc_auc_score(actual, predict)
+    except:
+        roc_auc = 0
+    return f1, precision, recall, TP, TN, FP, FN, roc_auc
 
 
 def adjust_predicts(score, label,
@@ -153,6 +157,7 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02):
         'TN': p_t[4],
         'FP': p_t[5],
         'FN': p_t[6],
+        'ROC/AUC': p_t[7],
         'threshold': pot_th,
         # 'pot-latency': p_latency
     }, np.array(pred)
