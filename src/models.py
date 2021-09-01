@@ -227,6 +227,31 @@ class MSCRED(nn.Module):
 		x = self.decoder(z)
 		return x.view(-1)
 
+## CAE-M Model (TKDE 21)
+class CAE_M(nn.Module):
+	def __init__(self, feats):
+		super(CAE_M, self).__init__()
+		self.name = 'CAE_M'
+		self.lr = 0.00005
+		self.n_feats = feats
+		self.n_window = feats
+		self.encoder = nn.Sequential(
+			nn.Conv2d(1, 64, (1, 1), 1), nn.ReLU(True),
+			nn.Conv2d(64, 128, (1, 1), 1), nn.ReLU(True),
+		)
+		self.decoder = nn.Sequential(
+			nn.ConvTranspose2d(128, 64, (3, 3), 1, 1), nn.ReLU(True),
+			nn.ConvTranspose2d(64, 1, (3, 3), 1, 1), nn.Sigmoid(),
+		)
+
+	def forward(self, g):
+		## Encode
+		z = g.view(1, 1, self.n_feats, self.n_window)
+		z = self.encoder(z)
+		## Decode
+		x = self.decoder(z)
+		return x.view(-1)
+
 ## MTAD_GAT Model (ICDM 20)
 class MTAD_GAT(nn.Module):
 	def __init__(self, feats):

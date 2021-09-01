@@ -5,11 +5,12 @@
 # (pp. 1190-1195). IEEE.
 
 import numpy as np
-from src.pot import *
 from pprint import pprint
 from time import time
 from src.utils import *
 from src.constants import *
+from src.diagnosis import *
+from src.pot import *
 maxint = 200000
 
 # z-normalized euclidean distance
@@ -49,7 +50,7 @@ def check(t, pred):
 		scores = np.abs(new - t[:,i])
 		labels.append((scores > np.percentile(scores, percentile_merlin)) + 0)
 	labels = np.array(labels).transpose()
-	return (np.sum(labels, axis=1) >= 1) + 0
+	return (np.sum(labels, axis=1) >= 1) + 0, labels
 
 # Discords Refinement Algorithm
 def drag(C, t, L, r):
@@ -129,18 +130,21 @@ def get_result(pred, labels):
     }
 	return result
 
-def run_merlin(test, labels):
-	t = next(iter(test)).detach().numpy()
+def run_merlin(test, labels, dset):
+	t = next(iter(test)).detach().numpy(); labelsAll = labels
 	labels = (np.sum(labels, axis=1) >= 1) + 0
 	lsum = np.sum(labels)
 	start = time()
 	pred = np.zeros_like(labels)
-	d, _ = merlin(t, 60, 62)
-	print('Result:', d)
-	pred[d[0]:d[0]+d[1]] = 1; 
-	pred = check(t, pred)
+	d, _ = merlin(t, 60, 62) #
+	print('Result:', d) #
+	pred[d[0]:d[0]+d[1]] = 1; #
+	pred, predAll = check(t, pred)
 	print(t.shape, pred.shape, labels.shape)
 	result = get_result(pred, labels)
+	if dset in ['SMD', 'MSDS']:
+		result.update(hit_att(predAll, labelsAll))
+		result.update(ndcg(predAll, labelsAll))
 	pprint(result); 
 	print(color.BOLD+'Training time: '+"{:10.4f}".format(time()-start)+' s'+color.ENDC)
 	exit()
