@@ -1,3 +1,9 @@
+# Replicated from the following paper:
+# Nakamura, T., Imamura, M., Mercer, R. and Keogh, E., 2020, November. 
+# MERLIN: Parameter-Free Discovery of Arbitrary Length Anomalies in Massive 
+# Time Series Archives. In 2020 IEEE International Conference on Data Mining (ICDM) 
+# (pp. 1190-1195). IEEE.
+
 import numpy as np
 from src.pot import *
 from pprint import pprint
