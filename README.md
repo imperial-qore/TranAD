@@ -18,7 +18,7 @@ pip3 install -r requirements.txt
 ## Dataset Preprocessing
 Preprocess all datasets using the command
 ```bash
-python3 preprocess.py SMAP MSL SWaT WADI MSDS SMD MSDS
+python3 preprocess.py SMAP MSL SWaT WADI MSDS SMD MSDS UCR
 ```
 Distribution rights to some datasets may not be available. Check the readme files in the `./data/` folder for more details. 
 
@@ -27,7 +27,7 @@ To run a model on a dataset, run the following command:
 ```bash
 python3 main.py --model <model> --dataset <dataset> --retrain
 ```
-where `<model>` can be either of 'TranAD', 'GDN', 'MAD_GAN', 'MTAD_GAT', 'MSCRED', 'USAD', 'OmniAnomaly', 'LSTM_AD', and dataset can be one of 'SMAP', 'MSL', 'SWaT', 'WADI', 'SMD', 'MSDS'. To train with 20% data, use the following command 
+where `<model>` can be either of 'TranAD', 'GDN', 'MAD_GAN', 'MTAD_GAT', 'MSCRED', 'USAD', 'OmniAnomaly', 'LSTM_AD', and dataset can be one of 'SMAP', 'MSL', 'SWaT', 'WADI', 'SMD', 'MSDS' and 'UCR'. To train with 20% data, use the following command 
 ```bash
 python3 main.py --model <model> --dataset <dataset> --retrain --less
 ```

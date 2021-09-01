@@ -3,3 +3,5 @@ tqdm
 matplotlib
 dgl
 numpy
+SciencePlots
+scikit-learn
