@@ -327,10 +327,10 @@ if __name__ == '__main__':
 	### Scores
 	df = pd.DataFrame()
 	lossT, _ = backprop(0, model, trainD, trainO, optimizer, scheduler, training=False)
-	# for i in range(loss.shape[1]):
-	# 	lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
-	# 	result, pred = pot_eval(lt, l, ls); preds.append(pred)
-	# 	df = df.append(result, ignore_index=True)
+	for i in range(loss.shape[1]):
+		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
+		result, pred = pot_eval(lt, l, ls); preds.append(pred)
+		df = df.append(result, ignore_index=True)
 	# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
 	# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
 	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
