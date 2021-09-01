@@ -129,9 +129,9 @@ def run_merlin(test, labels):
 	lsum = np.sum(labels)
 	start = time()
 	pred = np.zeros_like(labels)
-	# d, _ = merlin(t, 60, 62)
-	# print('Result:', d)
-	# pred[d[0]:d[0]+d[1]] = 1; 
+	d, _ = merlin(t, 60, 62)
+	print('Result:', d)
+	pred[d[0]:d[0]+d[1]] = 1; 
 	pred = check(t, pred)
 	print(t.shape, pred.shape, labels.shape)
 	result = get_result(pred, labels)
