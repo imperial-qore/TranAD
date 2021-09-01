@@ -28,6 +28,17 @@ lr_d = {
 lr = lr_d[args.dataset]
 
 # Debugging
-
+percentiles = {
+		'SMD': (98, 2000),
+		'synthetic': (95, 10),
+		'SWaT': (95, 10),
+		'SMAP': (97, 5000),
+		'MSL': (97, 150),
+		'WADI': (99, 1200),
+		'MSDS': (96, 30),
+		'UCR': (98, 2),
+	}
+percentile_merlin = percentiles[args.dataset][0]
+cvp = percentiles[args.dataset][1]
 preds = []
 debug = 9

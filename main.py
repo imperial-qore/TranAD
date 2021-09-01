@@ -8,6 +8,7 @@ from src.plotting import *
 from src.pot import *
 from src.utils import *
 from src.diagnosis import *
+from src.merlin import *
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch.nn as nn
 from time import time
@@ -292,6 +293,8 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 
 if __name__ == '__main__':
 	train_loader, test_loader, labels = load_dataset(args.dataset)
+	if args.model in ['MERLIN']:
+		eval(f'run_{args.model.lower()}(test_loader, labels)')
 	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, labels.shape[1])
 
 	## Prepare data
