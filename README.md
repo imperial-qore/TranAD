@@ -6,7 +6,7 @@
 This repository supplements our paper "TranAD: Deep Transformer Networks for Anomaly Detection in Multivariate Time Series Data". This is a refactored version of the code used for results in the paper for ease of use. Follow the below steps to replicate each cell in the results table.
 
 ## Results
-![Alt text](results/main.png?raw=true "results")
+![Alt text](results/main.PNG?raw=true "results")
 
 ## Installation
 This code needs Python-3.7 or higher.
