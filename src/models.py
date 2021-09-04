@@ -350,7 +350,7 @@ class MAD_GAN(nn.Module):
 		fake_score = self.discriminator(z.view(1,-1))
 		return z.view(-1), real_score.view(-1), fake_score.view(-1)
 
-# Proposed Model (ICDM 21)
+# Proposed Model (TKDE 21)
 class TranAD_Basic(nn.Module):
 	def __init__(self, feats):
 		super(TranAD_Basic, self).__init__()
@@ -375,7 +375,7 @@ class TranAD_Basic(nn.Module):
 		x = self.fcn(x)
 		return x
 
-# Proposed Model (FCN) + Self Conditioning + Adversarial + MAML (ICDM 21)
+# Proposed Model (FCN) + Self Conditioning + Adversarial + MAML (TKDE 21)
 class TranAD_Transformer(nn.Module):
 	def __init__(self, feats):
 		super(TranAD_Transformer, self).__init__()
@@ -416,7 +416,7 @@ class TranAD_Transformer(nn.Module):
 		x2 = self.fcn(x2)
 		return x1, x2
 
-# Proposed Model + Self Conditioning + MAML (ICDM 21)
+# Proposed Model + Self Conditioning + MAML (TKDE 21)
 class TranAD_Adversarial(nn.Module):
 	def __init__(self, feats):
 		super(TranAD_Adversarial, self).__init__()
@@ -452,7 +452,7 @@ class TranAD_Adversarial(nn.Module):
 		x = self.encode_decode(src, c, tgt)
 		return x
 
-# Proposed Model + Adversarial + MAML (ICDM 21)
+# Proposed Model + Adversarial + MAML (TKDE 21)
 class TranAD_SelfConditioning(nn.Module):
 	def __init__(self, feats):
 		super(TranAD_SelfConditioning, self).__init__()
@@ -487,7 +487,7 @@ class TranAD_SelfConditioning(nn.Module):
 		x2 = self.fcn(self.transformer_decoder2(*self.encode(src, c, tgt)))
 		return x1, x2
 
-# Proposed Model + Self Conditioning + Adversarial + MAML (ICDM 21)
+# Proposed Model + Self Conditioning + Adversarial + MAML (TKDE 21)
 class TranAD(nn.Module):
 	def __init__(self, feats):
 		super(TranAD, self).__init__()
