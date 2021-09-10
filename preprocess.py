@@ -160,6 +160,20 @@ def load_data(dataset):
 		print(train.shape, test.shape, labels.shape)
 		for file in ['train', 'test', 'labels']:
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
+	elif dataset == 'MBA':
+		dataset_folder = 'data/MBA'
+		ls = pd.read_excel(os.path.join(dataset_folder, 'labels.xlsx'))
+		train = pd.read_excel(os.path.join(dataset_folder, 'train.xlsx'))
+		test = pd.read_excel(os.path.join(dataset_folder, 'test.xlsx'))
+		train, test = train.values[1:,1:].astype(float), test.values[1:,1:].astype(float)
+		train, min_a, max_a = normalize3(train)
+		test, _, _ = normalize3(test, min_a, max_a)
+		ls = ls.values[:,1].astype(int)
+		labels = np.zeros_like(test)
+		for i in range(-20, 20):
+			labels[ls + i, :] = 1
+		for file in ['train', 'test', 'labels']:
+			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
 	else:
 		raise Exception(f'Not Implemented. Check one of {datasets}')
 
