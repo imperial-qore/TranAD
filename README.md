@@ -80,7 +80,7 @@ If you use this work, please cite using the following bibtex entry.
 ## License
 
 BSD-3-Clause. 
-Copyright (c) 2021, Shreshth Tuli.
+Copyright (c) 2022, Shreshth Tuli.
 All rights reserved.
 
 See License file for more details.
