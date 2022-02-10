@@ -65,6 +65,8 @@ Testing TranAD on SMAP
 All outputs can be run multiple times to ensure statistical significance. 
 
 ## Cite this work
+
+Our paper is available on arxiv: https://arxiv.org/abs/2201.07284.
 If you use this work, please cite using the following bibtex entry.
 ```bibtex
 @article{tuli2022tranad,
