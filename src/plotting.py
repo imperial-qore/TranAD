@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import statistics
-import os
+import os, torch
 import numpy as np
 
 plt.style.use(['science', 'ieee'])
@@ -16,6 +16,7 @@ def smooth(y, box_pts=1):
     return y_smooth
 
 def plotter(name, y_true, y_pred, ascore, labels):
+	if 'TranAD' in name: y_true = torch.roll(y_true, 1, 0)
 	os.makedirs(os.path.join('plots', name), exist_ok=True)
 	pdf = PdfPages(f'plots/{name}/output.pdf')
 	for dim in range(y_true.shape[1]):
