@@ -136,3 +136,5 @@ dmypy.json
 data/WADI/table_WADI.pdf
 data/WADI/WADI_14days.csv
 data/WADI/WADI_attackdata.csv
+data/SWaT/SWaT_Dataset_Attack_v0.csv
+data/SWaT/SWaT_Dataset_Normal_v1.csv

@@ -5,7 +5,7 @@ from src.folderconstants import *
 lm_d = {
 		'SMD': [(0.99995, 1.04), (0.99995, 1.06)],
 		'synthetic': [(0.999, 1), (0.999, 1)],
-		'SWaT': [(0.993, 1), (0.993, 1)],
+		'SWaT': [(0.993, 1), (0.95, 1)],
 		'UCR': [(0.993, 1), (0.99935, 1)],
 		'NAB': [(0.991, 1), (0.99, 1)],
 		'SMAP': [(0.98, 1), (0.98, 1)],
@@ -20,7 +20,7 @@ lm = lm_d[args.dataset][1 if 'TranAD' in args.model else 0]
 lr_d = {
 		'SMD': 0.0001, 
 		'synthetic': 0.0001, 
-		'SWaT': 0.008, 
+		'SWaT': 0.0004, 
 		'SMAP': 0.001, 
 		'MSL': 0.002, 
 		'WADI': 0.0001, 

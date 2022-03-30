@@ -46,6 +46,12 @@ def convertNumpy(df):
 	x = df[df.columns[3:]].values[::10, :]
 	return (x - x.min(0)) / (x.ptp(0) + 1e-4)
 
+def transformstr(df):
+	for i in list(df): 
+		df[i] = df[i].apply(lambda x: str(x).replace("," , "."))
+	df = df.astype(float)
+	return df
+
 def load_data(dataset):
 	folder = os.path.join(output_folder, dataset)
 	os.makedirs(folder, exist_ok=True)
@@ -125,14 +131,30 @@ def load_data(dataset):
 		labels = labels.values[::1, 1:]
 		for file in ['train', 'test', 'labels']:
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file).astype('float64'))
+	# elif dataset == 'SWaT':
+	# 	dataset_folder = 'data/SWaT'
+	# 	file = os.path.join(dataset_folder, 'series.json')
+	# 	df_train = pd.read_json(file, lines=True)[['val']][3000:6000]
+	# 	df_test  = pd.read_json(file, lines=True)[['val']][7000:12000]
+	# 	train, min_a, max_a = normalize2(df_train.values)
+	# 	test, _, _ = normalize2(df_test.values, min_a, max_a)
+	# 	labels = pd.read_json(file, lines=True)[['noti']][7000:12000] + 0
+	# 	print(train.shape, test.shape, labels.shape)
+	# 	for file in ['train', 'test', 'labels']:
+	# 		np.save(os.path.join(folder, f'{file}.npy'), eval(file))
 	elif dataset == 'SWaT':
-		dataset_folder = 'data/SWaT'
-		file = os.path.join(dataset_folder, 'series.json')
-		df_train = pd.read_json(file, lines=True)[['val']][3000:6000]
-		df_test  = pd.read_json(file, lines=True)[['val']][7000:12000]
-		train, min_a, max_a = normalize2(df_train.values)
-		test, _, _ = normalize2(df_test.values, min_a, max_a)
-		labels = pd.read_json(file, lines=True)[['noti']][7000:12000] + 0
+		dataset_folder = 'data/SWaT/'
+		df_train = pd.read_csv(dataset_folder + "SWaT_Dataset_Normal_v1.csv", nrows=1e4)
+		df_train = df_train.drop(['Timestamp', 'Normal/Attack'], axis=1)
+		df_test = pd.read_csv(dataset_folder + "SWaT_Dataset_Attack_v0.csv", sep=';', nrows=1e4)
+		labels = [ float(label!= 'Normal' ) for label  in df_test["Normal/Attack"].values]
+		df_test = df_test.drop(['Timestamp', 'Normal/Attack'], axis=1)
+		df_train, df_test = transformstr(df_train), transformstr(df_test)
+		train, min_a, max_a = normalize3(df_train.values)
+		test, _, _ = normalize3(df_test.values, min_a, max_a)
+		size = train.shape[0]
+		labels = np.broadcast_to(np.array(labels).reshape(-1, 1), test.shape)
+		print(train.shape, test.shape, labels.shape)
 		for file in ['train', 'test', 'labels']:
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
 	elif dataset in ['SMAP', 'MSL']:
