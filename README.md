@@ -18,9 +18,9 @@ pip3 install -r requirements.txt
 ## Dataset Preprocessing
 Preprocess all datasets using the command
 ```bash
-python3 preprocess.py SMAP MSL SWaT WADI MSDS SMD MSDS UCR MBA NAB
+python3 preprocess.py SMAP MSL SWaT WADI SMD MSDS UCR MBA NAB
 ```
-Distribution rights to some datasets may not be available. Check the readme files in the `./data/` folder for more details. 
+Distribution rights to some datasets may not be available. Check the readme files in the `./data/` folder for more details. If you want to ignore a dataset, remove it from the above command to ensure that the preprocessing does not fail.
 
 ## Result Reproduction
 To run a model on a dataset, run the following command:
