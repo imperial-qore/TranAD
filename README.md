@@ -36,7 +36,7 @@ For ablation studies, use the following models: 'TranAD_SelfConditioning', 'Tran
 
 The output will provide anomaly detection and diagnosis scores and training time. For example:
 ```bash
-$ python .\main.py --model TranAD --dataset SMAP --retrain 
+$ python3 main.py --model TranAD --dataset SMAP --retrain 
 Using backend: pytorch
 Creating new model: TranAD
 Training TranAD on SMAP
