@@ -66,13 +66,16 @@ All outputs can be run multiple times to ensure statistical significance.
 
 ## Cite this work
 
-Our paper is available on arxiv: https://arxiv.org/abs/2201.07284.
+Our paper is available in the Proceedings of VLDB: http://vldb.org/pvldb/vol15/p1201-tuli.pdf.
 If you use this work, please cite using the following bibtex entry.
 ```bibtex
 @article{tuli2022tranad,
   title={{TranAD: Deep Transformer Networks for Anomaly Detection in Multivariate Time Series Data}},
   author={Tuli, Shreshth and Casale, Giuliano and Jennings, Nicholas R},
-  journal={arXiv preprint arXiv:2201.07284},
+  journal={Proceedings of VLDB},
+  volume={15},
+  number={6},
+  pages={1201-1214},
   year={2022}
 }
 ```
