@@ -65,6 +65,10 @@ Testing TranAD on SMAP
 
 All outputs can be run multiple times to ensure statistical significance. 
 
+## Supplementary video
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/b2fSzneXPsg/0.jpg)](https://www.youtube.com/watch?v=b2fSzneXPsg)
+
 ## Cite this work
 
 Our paper is available in the Proceedings of VLDB: http://vldb.org/pvldb/vol15/p1201-tuli.pdf.
