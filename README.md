@@ -33,7 +33,7 @@ python3 main.py --model <model> --dataset <dataset> --retrain --less
 ```
 You can use the parameters in `src/params.json` to set values in `src/constants.py` for each file. 
 
-> Note: to reproduce exact results of baselines, use their original codebases (links given in our paper) as the ones implemented in this repository may not be identical to the original versions. 
+> Note: to reproduce exact results of baselines, use their original codebases (links given in our paper) as the ones implemented in this repository are *not* the ones used in the paper, which used the original versions. The versions provided here are for use of initial comparison and may not be identical to the original versions.
 
 For ablation studies, use the following models: 'TranAD_SelfConditioning', 'TranAD_Adversarial', 'TranAD_Transformer', 'TranAD_Basic'.
 
