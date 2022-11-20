@@ -261,7 +261,8 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, local_bs, feats)
 				z = model(window, elem)
-				l1 = l(z, elem) if not isinstance(z, tuple) else (1 / n) * l(z[0], elem) + (1 - 1/n) * l(z[1], elem)
+				l1 = l(z, elem) if not isinstance(z, tuple) else (0.9 ** n) * l(z[0], elem) + (1 - 0.9 ** n) * l(z[1], elem)
+				l1 += 0 if not isinstance(z, tuple) or len(z) < 3 else  (0.9 ** n) * l(z[2], elem) - (1 - 0.9 ** n) * l(z[1], elem)
 				if isinstance(z, tuple): z = z[1]
 				l1s.append(torch.mean(l1).item())
 				loss = torch.mean(l1)

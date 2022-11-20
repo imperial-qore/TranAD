@@ -518,7 +518,8 @@ class TranAD(nn.Module):
 		# Phase 1 - Without anomaly scores
 		c = torch.zeros_like(src)
 		x1 = self.fcn(self.transformer_decoder1(*self.encode(src, c, tgt)))
+		x12 = self.fcn(self.transformer_decoder2(*self.encode(src, c, tgt)))
 		# Phase 2 - With anomaly scores
 		c = (x1 - src) ** 2
 		x2 = self.fcn(self.transformer_decoder2(*self.encode(src, c, tgt)))
-		return x1, x2
+		return x1, x2, x12
