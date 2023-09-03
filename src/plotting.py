@@ -3,6 +3,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import statistics
 import os, torch
 import numpy as np
+import scienceplots
 
 plt.style.use(['science', 'ieee'])
 plt.rcParams["text.usetex"] = False
