@@ -251,7 +251,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
 		data_x = torch.DoubleTensor(data); dataset = TensorDataset(data_x, data_x)
-		bs = model.batch if training else len(data)
+		bs = model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1; w_size = model.n_window
 		l1s, l2s = [], []
@@ -272,12 +272,19 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			tqdm.write(f'Epoch {epoch},\tL1 = {np.mean(l1s)}')
 			return np.mean(l1s), optimizer.param_groups[0]['lr']
 		else:
+			losses = []
+			zs = []
 			for d, _ in dataloader:
+				local_bs = d.shape[0]
 				window = d.permute(1, 0, 2)
-				elem = window[-1, :, :].view(1, bs, feats)
+				elem = window[-1, :, :].view(1, local_bs, feats)
 				z = model(window, elem)
 				if isinstance(z, tuple): z = z[1]
-			loss = l(z, elem)[0]
+				loss = l(z, elem)[0]
+				zs.append(z.detach())
+				losses.append(loss.detach())	
+			loss = torch.cat(losses, 0)
+			z = torch.cat(zs, 1)
 			return loss.detach().numpy(), z.detach().numpy()[0]
 	else:
 		y_pred = model(data)

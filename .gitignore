@@ -9,6 +9,10 @@ data/MSDS/metrics
 data/MSDS/train.csv
 data/MSDS/test.csv
 
+data/VeReMi/train.csv
+data/VeReMi/test.csv
+data/VeReMi/labels.csv
+
 # C extensions
 *.so
 

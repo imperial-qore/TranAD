@@ -33,8 +33,12 @@ for df in dfs:
 	dfs2.append(df)
 dfs = dfs2
 
-df_merged = reduce(lambda  left,right: pd.merge(left,right,left_index=True,
-	right_index=True), dfs)
+# df_merged = reduce(lambda  left,right: pd.merge(left,right,left_index=True,
+# 	right_index=True), dfs)
+# df_merged = pd.concat(dfs, axis=1)
+suffixes = [("_0", "_1"), ("_1", "_2"), ("_2", "_3"), ("_3", "_4"), ("_4", "_5")]
+df_merged = reduce(lambda  left,right: pd.merge(left,right[1],left_index=True,
+    right_index=True, suffixes=suffixes[right[0]]), enumerate(dfs[1:]), dfs[0])
 
 # Change timezone string format
 

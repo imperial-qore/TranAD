@@ -7,7 +7,7 @@ import json
 from src.folderconstants import *
 from shutil import copyfile
 
-datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI', 'MSDS', 'UCR', 'MBA', 'NAB']
+datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI', 'MSDS', 'UCR', 'MBA', 'NAB', 'VeReMi']
 
 wadi_drop = ['2_LS_001_AL', '2_LS_002_AL','2_P_001_STATUS','2_P_002_STATUS']
 
@@ -123,6 +123,9 @@ def load_data(dataset):
 		test, _, _ = normalize3(df_test, min_a, max_a)
 		labels = pd.read_csv(os.path.join(dataset_folder, 'labels.csv'))
 		labels = labels.values[::1, 1:]
+		train = train[:labels.shape[0]]
+		test = test[:labels.shape[0]]
+		print(labels.shape, train.shape, test.shape)
 		for file in ['train', 'test', 'labels']:
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file).astype('float64'))
 	elif dataset == 'SWaT':
@@ -196,6 +199,22 @@ def load_data(dataset):
 			labels[ls + i, :] = 1
 		for file in ['train', 'test', 'labels']:
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
+	elif dataset == 'VeReMi':
+		dataset_folder = 'data/VeReMi'
+		df_train = pd.read_csv(os.path.join(dataset_folder, 'train.csv'))
+		df_test  = pd.read_csv(os.path.join(dataset_folder, 'test.csv'))
+		df_train, df_test = df_train.values[:, 1:], df_test.values[:, 1:]
+		_, min_a, max_a = normalize3(np.concatenate((df_train, df_test), axis=0))
+		train, _, _ = normalize3(df_train, min_a, max_a)
+		test, _, _ = normalize3(df_test, min_a, max_a)
+		labels = pd.read_csv(os.path.join(dataset_folder, 'labels.csv'))
+		labels = labels.values[:, 1:]
+		train = train[:labels.shape[0]]
+		test = test[:labels.shape[0]]
+		print(train.shape, test.shape, labels.shape)
+		for file in ['train', 'test', 'labels']:
+			np.save(os.path.join(folder, f'{file}.npy'), eval(file).astype('float64'))
+
 	else:
 		raise Exception(f'Not Implemented. Check one of {datasets}')
 
