@@ -25,6 +25,7 @@ def calc_point2point(predict, actual):
     return f1, precision, recall, TP, TN, FP, FN, roc_auc
 
 
+# the below function is taken from OmniAnomaly code base directly
 def adjust_predicts(score, label,
                     threshold=None,
                     pred=None,
