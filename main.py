@@ -23,7 +23,7 @@ def convert_to_windows(data, model):
 		windows.append(w if 'TranAD' in args.model or 'Attention' in args.model else w.view(-1))
 	return torch.stack(windows)
 
-def load_dataset(dataset):
+def load_dataset(dataset, device):
 	folder = os.path.join(output_folder, dataset)
 	if not os.path.exists(folder):
 		raise Exception('Processed Data not found.')
@@ -37,8 +37,8 @@ def load_dataset(dataset):
 		loader.append(np.load(os.path.join(folder, f'{file}.npy')))
 	# loader = [i[:, debug:debug+1] for i in loader]
 	if args.less: loader[0] = cut_array(0.2, loader[0])
-	train_loader = DataLoader(loader[0], batch_size=loader[0].shape[0])
-	test_loader = DataLoader(loader[1], batch_size=loader[1].shape[0])
+	train_loader = DataLoader(torch.from_numpy(loader[0]).to(device), batch_size=loader[0].shape[0])
+	test_loader = DataLoader(torch.from_numpy(loader[1]).to(device), batch_size=loader[1].shape[0])
 	labels = loader[2]
 	return train_loader, test_loader, labels
 
@@ -53,10 +53,11 @@ def save_model(model, optimizer, scheduler, epoch, accuracy_list):
         'scheduler_state_dict': scheduler.state_dict(),
         'accuracy_list': accuracy_list}, file_path)
 
-def load_model(modelname, dims):
+def load_model(modelname, dims, device=None):
 	import src.models
 	model_class = getattr(src.models, modelname)
 	model = model_class(dims).double()
+	model.to(device)
 	optimizer = torch.optim.AdamW(model.parameters() , lr=model.lr, weight_decay=1e-5)
 	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.9)
 	fname = f'checkpoints/{args.model}_{args.dataset}/model.ckpt'
@@ -250,7 +251,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		data_x = torch.DoubleTensor(data); dataset = TensorDataset(data_x, data_x)
+		dataset = TensorDataset(data, data)
 		bs = model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1; w_size = model.n_window
@@ -285,7 +286,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 				losses.append(loss.detach())	
 			loss = torch.cat(losses, 0)
 			z = torch.cat(zs, 1)
-			return loss.detach().numpy(), z.detach().numpy()[0]
+			return loss.detach().cpu().numpy(), z.detach().cpu().numpy()[0]
 	else:
 		y_pred = model(data)
 		loss = l(y_pred, data)
@@ -300,10 +301,11 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			return loss.detach().numpy(), y_pred.detach().numpy()
 
 if __name__ == '__main__':
-	train_loader, test_loader, labels = load_dataset(args.dataset)
+	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+	train_loader, test_loader, labels = load_dataset(args.dataset, device)
 	if args.model in ['MERLIN']:
 		eval(f'run_{args.model.lower()}(test_loader, labels, args.dataset)')
-	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, labels.shape[1])
+	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, labels.shape[1], device=device)
 
 	## Prepare data
 	trainD, testD = next(iter(train_loader)), next(iter(test_loader))
@@ -331,7 +333,7 @@ if __name__ == '__main__':
 	### Plot curves
 	if not args.test:
 		if 'TranAD' in model.name: testO = torch.roll(testO, 1, 0) 
-		plotter(f'{args.model}_{args.dataset}', testO, y_pred, loss, labels)
+		plotter(f'{args.model}_{args.dataset}', testO.cpu(), y_pred, loss, labels)
 
 	### Scores
 	df = pd.DataFrame()
