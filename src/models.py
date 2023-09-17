@@ -67,8 +67,8 @@ class LSTM_AD(nn.Module):
 		self.fcn = nn.Sequential(nn.Linear(self.n_feats, self.n_feats), nn.Sigmoid())
 
 	def forward(self, x):
-		hidden = (torch.rand(1, 1, self.n_hidden, dtype=torch.float64), torch.randn(1, 1, self.n_hidden, dtype=torch.float64))
-		hidden2 = (torch.rand(1, 1, self.n_feats, dtype=torch.float64), torch.randn(1, 1, self.n_feats, dtype=torch.float64))
+		hidden = (torch.rand(1, 1, self.n_hidden, dtype=torch.float32, device='cuda:0'), torch.randn(1, 1, self.n_hidden, device='cuda:0', dtype=torch.float32))
+		hidden2 = (torch.rand(1, 1, self.n_feats, dtype=torch.float32, device='cuda:0'), torch.randn(1, 1, self.n_feats, device='cuda:0', dtype=torch.float32))
 		outputs = []
 		for i, g in enumerate(x):
 			out, hidden = self.lstm(g.view(1, 1, -1), hidden)

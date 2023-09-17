@@ -22,4 +22,8 @@ parser.add_argument('--retrain',
 parser.add_argument('--less', 
 					action='store_true', 
 					help="train using less data")
+
+parser.add_argument('--multilabel-test', 
+					action='store_true', 
+					help="test using a multilabel eval")
 args = parser.parse_args()

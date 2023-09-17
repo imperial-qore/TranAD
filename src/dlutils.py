@@ -197,7 +197,7 @@ class PositionalEncoding(nn.Module):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
-        pe = torch.zeros(max_len, d_model)
+        pe = torch.zeros(max_len, d_model, dtype=torch.float)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model).float() * (-math.log(10000.0) / d_model))
         pe += torch.sin(position * div_term)
@@ -206,7 +206,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x, pos=0):
-        x = x + self.pe[pos:pos+x.size(0), :]
+        x = x + self.pe[pos:pos+x.size(0)]
         return self.dropout(x)
 
 class TransformerEncoderLayer(nn.Module):
