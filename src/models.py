@@ -496,6 +496,8 @@ class TranAD(nn.Module):
 		self.batch = 128
 		self.n_feats = feats
 		self.n_window = 10
+		self.n_window_start = self.n_window
+		self.n_window_slide = 5
 		self.n = self.n_feats * self.n_window
 		self.pos_encoder = PositionalEncoding(2 * feats, 0.1, self.n_window)
 		encoder_layers = TransformerEncoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=16, dropout=0.1)
@@ -522,3 +524,41 @@ class TranAD(nn.Module):
 		c = (x1 - src) ** 2
 		x2 = self.fcn(self.transformer_decoder2(*self.encode(src, c, tgt)))
 		return x1, x2
+
+class AlladiCNNLSTM(nn.Module):
+	def __init__(self, feats):
+		super(AlladiCNNLSTM, self).__init__()
+		self.name = 'AlladiCNNLSTM'
+		self.lr = 0.002
+		self.n_feats = feats
+		self.n_window = 20
+		self.n_window_slide = 10
+		self.n_window_start = self.n_window
+		self.n_hidden = 256
+		self.n_layers = 4
+
+		# Define the CNN layers
+		self.cnn = nn.Sequential(
+			nn.Conv1d(feats, 20, kernel_size=3),
+			nn.ReLU(),
+		)
+
+		# Define the LSTM layers
+		self.lstm = nn.LSTM(20, self.n_hidden, self.n_layers, batch_first=True)
+
+		# Fully connected layer
+		self.fc = nn.Linear(self.n_hidden, self.n_feats)
+
+	def forward(self, src):
+		# Forward pass through CNN
+		src = self.cnn(src)
+
+		# Prepare the input for LSTM (reshape)
+		src = src.permute(0, 2, 1)
+
+		# Forward pass through LSTM
+		out, _ = self.lstm(src)
+
+		# Decode the hidden state of the last time step
+		out = self.fc(out[:, -1, :])
+		return out

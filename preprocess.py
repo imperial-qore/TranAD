@@ -7,7 +7,7 @@ import json
 from src.folderconstants import *
 from shutil import copyfile
 
-datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI', 'MSDS', 'UCR', 'MBA', 'NAB', 'VeReMi']
+datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI', 'MSDS', 'UCR', 'MBA', 'NAB', 'VeReMi', 'VeReMi2']
 
 wadi_drop = ['2_LS_001_AL', '2_LS_002_AL','2_P_001_STATUS','2_P_002_STATUS']
 
@@ -201,23 +201,23 @@ def load_data(dataset):
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
 	elif dataset == 'VeReMi':
 		dataset_folder = 'data/VeReMi'
-		df_train = pd.read_csv(os.path.join(dataset_folder, 'train.csv'))
+		df_train = pd.read_csv(os.path.join(dataset_folder, 'train_no_filter.csv'))
 		df_test  = pd.read_csv(os.path.join(dataset_folder, 'test.csv'))
-		df_train, df_test = df_train.values[:, 5:], df_test.values[:, 5:]
+		df_train, df_test = df_train.values[:, 6:], df_test.values[:, 6:]
 		_, min_a, max_a = normalize3(np.concatenate((df_train, df_test), axis=0))
 		train, _, _ = normalize3(df_train, min_a, max_a)
 		test, _, _ = normalize3(df_test, min_a, max_a)
 		labels = pd.read_csv(os.path.join(dataset_folder, 'labels.csv'))
-		labels = labels.values[:, 5:]
+		labels = labels.values[:, 6:]
 		print(train.shape, test.shape, labels.shape)
 		extra_files = []
 		for attack_type in range(10, 20):
 			test_i = pd.read_csv(os.path.join(dataset_folder, f'test_{attack_type}.csv'))
-			test_i = test_i.values[:, 5:]
+			test_i = test_i.values[:, 6:]
 			test_i, _, _ = normalize3(test_i, min_a, max_a)
 
 			labels_i = pd.read_csv(os.path.join(dataset_folder, f'labels_{attack_type}.csv'))
-			labels_i = labels_i.values[:, 5:]
+			labels_i = labels_i.values[:, 6:]
 			extra_files.extend((
 				(f'test_{attack_type}', test_i),
 			        (f'labels_{attack_type}', labels_i),
@@ -228,6 +228,25 @@ def load_data(dataset):
 
 		for filename, arr in extra_files:
 			np.save(os.path.join(folder, f'{filename}.npy'), arr.astype('float64'))
+
+	elif dataset == 'VeReMi2':
+		dataset_folder = 'data/VeReMi2'
+		attack_type = 'attack1withlabels'
+		df_train = pd.read_csv(os.path.join(dataset_folder, f'train_{attack_type}.csv'))
+		df_test  = pd.read_csv(os.path.join(dataset_folder, f'test_{attack_type}.csv'))
+		df_train, df_test = df_train.values[:, 3:], df_test.values[:, 3:]
+		df_train, df_test = np.delete(df_train, range(6, 8), axis=1), np.delete(df_test, range(6, 8), axis=1)
+		_, min_a, max_a = normalize3(np.concatenate((df_train, df_test), axis=0))
+		train, _, _ = normalize3(df_train, min_a, max_a)
+		test, _, _ = normalize3(df_test, min_a, max_a)
+
+		labels = pd.read_csv(os.path.join(dataset_folder, f'labels_{attack_type}.csv'))
+		labels = labels.values[:, 3:]
+		labels = np.delete(labels, range(6, 8), axis=1)
+		print(train.shape, test.shape, labels.shape)
+
+		for file in ['train', 'test', 'labels']:
+			np.save(os.path.join(folder, f'{file}.npy'), eval(file).astype('float64'))
 
 	else:
 		raise Exception(f'Not Implemented. Check one of {datasets}')

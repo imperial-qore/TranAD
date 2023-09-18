@@ -15,13 +15,21 @@ from time import time
 from pprint import pprint
 # from beepy import beep
 
-def convert_to_windows(data, model):
+def convert_to_windows(data, model, training=True):
 	windows = []
 	w_size = model.n_window
-	for i, g in enumerate(data): 
+	slide = 1
+	start = 0
+	if training:
+		if hasattr(model, 'n_window_slide'):
+			slide = model.n_window_slide
+		if hasattr(model, 'n_window_start'):
+			start = model.n_window_start
+
+	for i in range(start, len(data), slide): 
 		if i >= w_size: w = data[i-w_size:i]
 		else: w = torch.cat([data[0].repeat(w_size-i, 1), data[0:i]])
-		windows.append(w if 'TranAD' in args.model or 'Attention' in args.model else w.view(-1))
+		windows.append(w if 'TranAD' in args.model or 'Attention' in args.model or 'Alladi' in args.model else w.view(-1))
 	return torch.stack(windows)
 
 def load_dataset(dataset, device):
@@ -298,6 +306,44 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			loss = torch.cat(losses, 0)
 			z = torch.cat(zs, 1)
 			return loss.detach().cpu().numpy(), z.detach().cpu().numpy()[0]
+	elif 'Alladi' in model.name:
+		l = nn.MSELoss(reduction = 'none')
+		dataset = TensorDataset(data, data)
+		bs = 512  # model.batch # if training else 1024  # len(data)
+		dataloader = DataLoader(dataset, batch_size = bs)
+		n = epoch + 1
+		l1s, l2s = [], []
+		if training:
+			for d, _ in dataloader:
+				local_bs = d.shape[0]
+				window = d .permute(0, 2, 1)
+				elem = window[:, :, -1].view(local_bs, feats, 1)
+				z = model(window).view(local_bs, feats, 1)
+				l1 = l(z, elem) if not isinstance(z, tuple) else (1 / n) * l(z[0], elem) + (1 - 1/n) * l(z[1], elem)
+				if isinstance(z, tuple): z = z[1]
+				l1s.append(torch.mean(l1).item())
+				loss = torch.mean(l1)
+				optimizer.zero_grad()
+				loss.backward(retain_graph=True)
+				optimizer.step()
+			scheduler.step()
+			tqdm.write(f'Epoch {epoch},\tL1 = {np.mean(l1s)}')
+			return np.mean(l1s), optimizer.param_groups[0]['lr']
+		else:
+			losses = []
+			zs = []
+			for d, _ in dataloader:
+				local_bs = d.shape[0]
+				window = d.permute(0, 2, 1)
+				elem = window[:, :, -1]#.view(1, local_bs, feats)
+				z = model(window)
+				if isinstance(z, tuple): z = z[1]
+				loss = l(z, elem)
+				zs.append(z.detach())
+				losses.append(loss.detach())	
+			loss = torch.cat(losses, 0)
+			z = torch.cat(zs, 0)
+			return loss.detach().cpu().numpy(), z.detach().cpu().numpy()[0]
 	else:
 		y_pred = model(data)
 		loss = l(y_pred, data)
@@ -322,7 +368,7 @@ if __name__ == '__main__':
 	## Prepare data
 	trainD = next(iter(train_loader))
 	trainO = trainD
-	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN'] or 'TranAD' in model.name: 
+	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
 		trainD = convert_to_windows(trainD, model)
 
 	### Training phase
@@ -343,8 +389,8 @@ if __name__ == '__main__':
 	for n in range(0, len(labels)):
 		testD = next(iter(test_loader[n]))
 		testO = testD
-		if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN'] or 'TranAD' in model.name: 
-			testD = convert_to_windows(testD, model)
+		if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
+			testD = convert_to_windows(testD, model, training=False)
 
 		### Testing phase
 		torch.zero_grad = True
@@ -354,8 +400,8 @@ if __name__ == '__main__':
 
 		print('bp1')
 		### Plot curves
-		if not args.test:
-			if 'TranAD' in model.name: testO = torch.roll(testO, 1, 0) 
+		if args.plot or not args.test:
+			if 'TranAD' in model.name or 'Alladi' in model.name: testO = torch.roll(testO, 1, 0) 
 			plotter(f'{args.model}_{args.dataset}', testO.cpu(), y_pred, loss, labels[n])
 
 		print('plotter')

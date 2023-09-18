@@ -26,4 +26,8 @@ parser.add_argument('--less',
 parser.add_argument('--multilabel-test', 
 					action='store_true', 
 					help="test using a multilabel eval")
+
+parser.add_argument('--plot', 
+					action='store_true', 
+					help="force plotting")
 args = parser.parse_args()
