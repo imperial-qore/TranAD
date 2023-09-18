@@ -551,6 +551,7 @@ class AlladiCNNLSTM(nn.Module):
 
 	def forward(self, src):
 		# Forward pass through CNN
+		src = src.permute(0, 2, 1)
 		src = self.cnn(src)
 
 		# Prepare the input for LSTM (reshape)
@@ -561,4 +562,4 @@ class AlladiCNNLSTM(nn.Module):
 
 		# Decode the hidden state of the last time step
 		out = self.fc(out[:, -1, :])
-		return out
+		return out.unsqueeze(0)

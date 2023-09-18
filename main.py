@@ -309,18 +309,16 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 	elif 'Alladi' in model.name:
 		l = nn.MSELoss(reduction = 'none')
 		dataset = TensorDataset(data, data)
-		bs = 512  # model.batch # if training else 1024  # len(data)
+		bs = 4096  # model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1
 		l1s, l2s = [], []
 		if training:
 			for d, _ in dataloader:
 				local_bs = d.shape[0]
-				window = d .permute(0, 2, 1)
-				elem = window[:, :, -1].view(local_bs, feats, 1)
-				z = model(window).view(local_bs, feats, 1)
+				elem = d[:, -1, :].view(1, local_bs, feats)
+				z = model(d)
 				l1 = l(z, elem) if not isinstance(z, tuple) else (1 / n) * l(z[0], elem) + (1 - 1/n) * l(z[1], elem)
-				if isinstance(z, tuple): z = z[1]
 				l1s.append(torch.mean(l1).item())
 				loss = torch.mean(l1)
 				optimizer.zero_grad()
@@ -334,15 +332,13 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			zs = []
 			for d, _ in dataloader:
 				local_bs = d.shape[0]
-				window = d.permute(0, 2, 1)
-				elem = window[:, :, -1]#.view(1, local_bs, feats)
-				z = model(window)
-				if isinstance(z, tuple): z = z[1]
-				loss = l(z, elem)
+				elem = d[:, -1, :].view(1, local_bs, feats)
+				z = model(d)
+				loss = l(z, elem)[0]
 				zs.append(z.detach())
 				losses.append(loss.detach())	
 			loss = torch.cat(losses, 0)
-			z = torch.cat(zs, 0)
+			z = torch.cat(zs, 1)
 			return loss.detach().cpu().numpy(), z.detach().cpu().numpy()[0]
 	else:
 		y_pred = model(data)
