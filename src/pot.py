@@ -15,14 +15,15 @@ def calc_point2point(predict, actual):
     TN = np.sum((1 - predict) * (1 - actual))
     FP = np.sum(predict * (1 - actual))
     FN = np.sum((1 - predict) * actual)
-    precision = TP / (TP + FP + 0.00001)
-    recall = TP / (TP + FN + 0.00001)
-    f1 = 2 * precision * recall / (precision + recall + 0.00001)
+    acc = (TP + TN) / (TP + FP + TN + FN)  # + 0.00001)
+    precision = TP / (TP + FP)  # + 0.00001)
+    recall = TP / (TP + FN)  # + 0.00001)
+    f1 = 2 * precision * recall / (precision + recall)  # + 0.00001)
     try:
         roc_auc = roc_auc_score(actual, predict)
     except:
         roc_auc = 0
-    return f1, precision, recall, TP, TN, FP, FN, roc_auc
+    return f1, precision, recall, TP, TN, FP, FN, roc_auc, acc
 
 
 # the below function is taken from OmniAnomaly code base directly
@@ -159,6 +160,7 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02):
         'FP': p_t[5],
         'FN': p_t[6],
         'ROC/AUC': p_t[7],
+        'accuracy': p_t[8],
         'threshold': pot_th,
         # 'pot-latency': p_latency
     }, np.array(pred)

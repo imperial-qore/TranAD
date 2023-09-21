@@ -201,7 +201,7 @@ def load_data(dataset):
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file))
 	elif dataset == 'VeReMi':
 		dataset_folder = 'data/VeReMi'
-		df_train = pd.read_csv(os.path.join(dataset_folder, 'train_no_filter.csv'))
+		df_train = pd.read_csv(os.path.join(dataset_folder, 'train.csv'))
 		df_test  = pd.read_csv(os.path.join(dataset_folder, 'test.csv'))
 		df_train, df_test = df_train.values[:, 6:], df_test.values[:, 6:]
 		_, min_a, max_a = normalize3(np.concatenate((df_train, df_test), axis=0))

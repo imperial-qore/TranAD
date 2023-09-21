@@ -271,7 +271,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
 		dataset = TensorDataset(data, data)
-		bs = 4096  # model.batch # if training else 1024  # len(data)
+		bs = 256  # model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1
 		l1s, l2s = [], []
@@ -309,7 +309,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 	elif 'Alladi' in model.name:
 		l = nn.MSELoss(reduction = 'none')
 		dataset = TensorDataset(data, data)
-		bs = 4096  # model.batch # if training else 1024  # len(data)
+		bs = 256  # model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1
 		l1s, l2s = [], []
