@@ -45,7 +45,7 @@ def adjust_predicts(score, label,
         np.ndarray: predict labels
     """
     if len(score) != len(label):
-        raise ValueError("score and label must have the same length")
+        raise ValueError(f"score ({len(score)}) and label ({len(score)}) must have the same length")
     score = np.asarray(score)
     label = np.asarray(label)
     latency = 0
@@ -182,7 +182,6 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02, multi=False):
                 cond = label[mask] > 0
 
             actual = np.where(cond, 1, 0)
-            print(np.sum(actual), actual.shape[0])
             p_t = calc_point2point(pred_only_curr_lb, actual)
             metrics[int(lb)] = {
                 'f1': p_t[0],

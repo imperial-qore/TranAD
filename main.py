@@ -1,3 +1,4 @@
+import gc
 import pickle
 import os
 import pandas as pd
@@ -27,8 +28,10 @@ def convert_to_windows(data, model, training=True):
 			start = model.n_window_start
 
 	for i in range(start, len(data), slide): 
-		if i >= w_size: w = data[i-w_size:i]
-		else: w = torch.cat([data[0].repeat(w_size-i, 1), data[0:i]])
+		if i >= w_size:
+			w = data[i-w_size:i]
+		else:
+			w = torch.cat([data[0].repeat(w_size-i, 1), data[0:i]])
 		windows.append(w if 'TranAD' in args.model or 'Attention' in args.model or 'Alladi' in args.model else w.view(-1))
 	return torch.stack(windows)
 
@@ -46,10 +49,10 @@ def load_dataset(dataset, device):
 		loader.append(np.load(os.path.join(folder, f'{file}.npy')))
 	# loader = [i[:, debug:debug+1] for i in loader]
 	if args.less: loader[0] = cut_array(0.2, loader[0])
-	train_loader = DataLoader(torch.tensor(loader[0], device=device, dtype=torch.float32), batch_size=loader[0].shape[0])
-	test_loader = DataLoader(torch.tensor(loader[1], device=device, dtype=torch.float32), batch_size=loader[1].shape[0])
+	train = torch.tensor(loader[0], device=device, dtype=torch.float32)
+	test = torch.tensor(loader[1], device=device, dtype=torch.float32)
 	labels = loader[2]
-	return train_loader, test_loader, labels
+	return train, test, labels
 
 def save_model(model, optimizer, scheduler, epoch, accuracy_list):
 	folder = f'checkpoints/{args.model}_{args.dataset}/'
@@ -83,9 +86,9 @@ def load_model(modelname, dims, device=None):
 		epoch = -1; accuracy_list = []
 	return model, optimizer, scheduler, epoch, accuracy_list
 
-def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
+def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 	l = nn.MSELoss(reduction = 'mean' if training else 'none')
-	feats = dataO.shape[1]
+	feats = data.shape[-1]
 	if 'DAGMM' in model.name:
 		l = nn.MSELoss(reduction = 'none')
 		compute = ComputeLoss(model, 0.1, 0.005, 'cpu', model.n_gmm)
@@ -261,12 +264,13 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
 		dataset = TensorDataset(data, data)
-		bs = 1024  # model.batch # if training else 1024  # len(data)
+		bs = 10000  # model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1
 		l1s, l2s = [], []
 		if training:
 			for d, _ in dataloader:
+				d = d.to(device)
 				local_bs = d.shape[0]
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, local_bs, feats)
@@ -284,15 +288,16 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 		else:
 			losses = []
 			zs = []
-			for d, _ in dataloader:
+			for d, _ in tqdm(dataloader):
+				d = d.to(device)
 				local_bs = d.shape[0]
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, local_bs, feats)
 				z = model(window, elem)
 				if isinstance(z, tuple): z = z[1]
 				loss = l(z, elem)[0]
-				zs.append(z.detach())
-				losses.append(loss.detach())	
+				zs.append(z.cpu().detach())
+				losses.append(loss.cpu().detach())	
 			loss = torch.cat(losses, 0)
 			z = torch.cat(zs, 1)
 			return loss.detach().cpu().numpy(), z.detach().cpu().numpy()[0]
@@ -344,58 +349,63 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 			return loss.detach().cpu().numpy(), y_pred.detach().cpu().numpy()
 
 if __name__ == '__main__':
-	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-	train_loader, test_loader, labels = load_dataset(args.dataset, device)
+	exec_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+	cpu = torch.device("cpu")
+	train, test, labels = load_dataset(args.dataset, cpu)
+	testO = test.clone()
+
 	if args.model in ['MERLIN']:
 		eval(f'run_{args.model.lower()}(test_loader, labels, args.dataset)')
 	dims = labels.shape[1]
-	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, dims, device=device)
+	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, dims, device=exec_device)
 
 	## Prepare data
-	trainD = next(iter(train_loader))
-	trainO = trainD
 	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
-		trainD = convert_to_windows(trainD, model)
+		train = convert_to_windows(train, model)
 
 	### Training phase
 	if not args.test:
 		print(f'{color.HEADER}Training {args.model} on {args.dataset}{color.ENDC}')
 		num_epochs = 5; e = epoch + 1; start = time()
 		for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
-			lossT, lr = backprop(e, model, trainD, trainO, optimizer, scheduler)
+			lossT, lr = backprop(e, model, train, optimizer, scheduler, exec_device)
 			accuracy_list.append((lossT, lr))
 		print(color.BOLD+'Training time: '+"{:10.4f}".format(time()-start)+' s'+color.ENDC)
 		save_model(model, optimizer, scheduler, e, accuracy_list)
 		plot_accuracies(accuracy_list, f'{args.model}_{args.dataset}')
+		del accuracy_list
+		del lossT
+		del lr
+		gc.collect()
 
-	testD = next(iter(test_loader))
-	testO = testD
 	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
-		testD = convert_to_windows(testD, model, training=False)
+		test = convert_to_windows(test, model, training=False)
 
 	### Testing phase
 	torch.zero_grad = True
 	model.eval()
 	print(f'{color.HEADER}Testing {args.model} on {args.dataset}{color.ENDC}')
-	loss, y_pred = backprop(0, model, testD, testO, optimizer, scheduler, training=False)
+	loss, y_pred = backprop(0, model, test, optimizer, scheduler, exec_device, training=False)
 
-	print('bp1')
-	### Plot curves
-	if args.plot or not args.test:
-		if 'TranAD' in model.name or 'Alladi' in model.name: testO = torch.roll(testO, 1, 0) 
-		plotter(f'{args.model}_{args.dataset}', testO.cpu(), y_pred, loss, labels)
-
-	print('plotter')
 	### Scores
 	df = pd.DataFrame()
-	lossT, _ = backprop(0, model, trainD, trainO, optimizer, scheduler, training=False)
-	print('bp2')
+	lossT, _ = backprop(0, model, train, optimizer, scheduler, exec_device, training=False)
+
+	preds = []
 	for i in range(loss.shape[1]):
 		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
-		result, pred = pot_eval(lt, l, ls); preds.append(pred)
+		result, pred = pot_eval(lt, l, ls)
+		preds.append(pred)
 		# df = df.append(result, ignore_index=True)
 		df = pd.concat([df, pd.DataFrame([result])], ignore_index=True)
-	print('pot_eval')
+
+	### Plot curves
+	if args.plot or not args.test:
+		if 'TranAD' in model.name or 'Alladi' in model.name:
+			testO = torch.roll(testO, 1, 0) 
+		preds = np.swapaxes(np.vstack(preds), 0, 1)
+		plotter(f'{args.model}_{args.dataset}', testO.detach(), y_pred, loss, labels, preds)
+
 	# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
 	# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
 	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)

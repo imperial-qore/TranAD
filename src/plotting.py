@@ -16,12 +16,12 @@ def smooth(y, box_pts=1):
     y_smooth = np.convolve(y, box, mode='same')
     return y_smooth
 
-def plotter(name, y_true, y_pred, ascore, labels):
+def plotter(name, y_true, y_pred, ascore, labels, preds):
 	if 'TranAD' in name or 'Alladi' in name: y_true = torch.roll(y_true, 1, 0)
 	os.makedirs(os.path.join('plots', name), exist_ok=True)
 	pdf = PdfPages(f'plots/{name}/output.pdf')
 	for dim in range(y_true.shape[1]):
-		y_t, y_p, l, a_s = y_true[:, dim], y_pred[:, dim], np.where(labels[:, dim] > 0, 1, 0), ascore[:, dim]
+		y_t, y_p, l, a_s, p = y_true[:, dim], y_pred[:1000, dim], np.where(labels[:1000, dim] > 0, 1, 0), ascore[:1000, dim], preds[:1000, dim]
 		fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 		ax1.set_ylabel('Value')
 		ax1.set_title(f'Dimension = {dim}')
@@ -35,6 +35,9 @@ def plotter(name, y_true, y_pred, ascore, labels):
 		ax2.plot(smooth(a_s), linewidth=0.2, color='g')
 		ax2.set_xlabel('Timestamp')
 		ax2.set_ylabel('Anomaly Score')
+		ax4 = ax2.twinx()
+		ax4.plot(p, '--', linewidth=0.3, alpha=0.5)
+		ax4.fill_between(np.arange(p.shape[0]), p, color='yellow', alpha=0.3)
 		pdf.savefig(fig)
 		plt.close()
 	pdf.close()

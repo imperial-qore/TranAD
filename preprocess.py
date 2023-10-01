@@ -251,8 +251,8 @@ def load_data(dataset):
 
 	elif dataset == 'VeReMi3':
 		dataset_folder = 'data/VeReMi3'
-		df_train = pd.read_feather(os.path.join(dataset_folder, f'train_full_genuine.feather')).head(5000000)
-		df_test = pd.read_feather(os.path.join(dataset_folder, f'test.feather'))[5000000:5500000]
+		df_train = pd.read_feather(os.path.join(dataset_folder, f'train_full_genuine.feather'))#.head(5000000)
+		df_test = pd.read_feather(os.path.join(dataset_folder, f'test.feather'))#[5000000:5500000]
 		fields = [
 			'snd_pos_x',
 			'snd_pos_y',
