@@ -15,6 +15,7 @@ def calc_point2point(predict, actual):
     TN = np.sum((1 - predict) * (1 - actual))
     FP = np.sum(predict * (1 - actual))
     FN = np.sum((1 - predict) * actual)
+
     acc = (TP + TN) / (TP + FP + TN + FN)  # + 0.00001)
     precision = TP / (TP + FP)  # + 0.00001)
     recall = TP / (TP + FN)  # + 0.00001)
@@ -118,7 +119,7 @@ def bf_search(score, label, start, end=None, step_num=1, display_freq=1, verbose
     return m, m_t
 
 
-def pot_eval(init_score, score, label, q=1e-5, level=0.02):
+def pot_eval(init_score, score, label, q=1e-5, level=0.02, multi=False):
     """
     Run POT method on given score.
     Args:
@@ -149,9 +150,10 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02):
     pred, p_latency = adjust_predicts(score, label, pot_th, calc_latency=True)
     # DEBUG - np.save(f'{debug}.npy', np.array(pred))
     # DEBUG - print(np.argwhere(np.array(pred)))
-    p_t = calc_point2point(pred, label)
-    # print('POT result: ', p_t, pot_th, p_latency)
-    return {
+
+    p_t = calc_point2point(pred, np.where(label > 0, 1, 0))
+
+    metrics = {
         'f1': p_t[0],
         'precision': p_t[1],
         'recall': p_t[2],
@@ -163,4 +165,37 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02):
         'accuracy': p_t[8],
         'threshold': pot_th,
         # 'pot-latency': p_latency
-    }, np.array(pred)
+    }
+
+    if multi:
+        label_types = np.unique(label)
+        for lb in label_types:
+            if lb == 0:
+                mask = np.ones_like(label, dtype=bool)
+            else:
+                mask = np.isin(label, [0, lb])
+            pred_only_curr_lb = pred[mask]
+            if lb == 0:
+                cond = label[mask] == 0
+                pred_only_curr_lb = 1 - pred_only_curr_lb
+            else:
+                cond = label[mask] > 0
+
+            actual = np.where(cond, 1, 0)
+            print(np.sum(actual), actual.shape[0])
+            p_t = calc_point2point(pred_only_curr_lb, actual)
+            metrics[int(lb)] = {
+                'f1': p_t[0],
+                'precision': p_t[1],
+                'recall': p_t[2],
+                'TP': p_t[3],
+                'TN': p_t[4],
+                'FP': p_t[5],
+                'FN': p_t[6],
+                'ROC/AUC': p_t[7],
+                'accuracy': p_t[8],
+                'threshold': pot_th,
+            }
+
+    # print('POT result: ', p_t, pot_th, p_latency)
+    return metrics, np.array(pred)

@@ -43,22 +43,12 @@ def load_dataset(dataset, device):
 		if dataset == 'MSL': file = 'C-1_' + file
 		if dataset == 'UCR': file = '136_' + file
 		if dataset == 'NAB': file = 'ec2_request_latency_system_failure_' + file
-		if dataset == 'VeReMi' and args.multilabel_test and file != 'train':
-			file = [f'{file}_{i}' for i in range(10, 20)]
-		if isinstance(file, list):
-			for f in file:
-				loader.append(np.load(os.path.join(folder, f'{f}.npy')))
-		else:
-			loader.append(np.load(os.path.join(folder, f'{file}.npy')))
+		loader.append(np.load(os.path.join(folder, f'{file}.npy')))
 	# loader = [i[:, debug:debug+1] for i in loader]
 	if args.less: loader[0] = cut_array(0.2, loader[0])
 	train_loader = DataLoader(torch.tensor(loader[0], device=device, dtype=torch.float32), batch_size=loader[0].shape[0])
-	if not args.multilabel_test:
-		test_loader = DataLoader(torch.tensor(loader[1], device=device, dtype=torch.float32), batch_size=loader[1].shape[0])
-		labels = loader[2]
-	else:
-		test_loader = [DataLoader(torch.tensor(loader[i], device=device, dtype=torch.float32), batch_size=loader[i].shape[0]) for i in range(1, 11)]
-		labels = [loader[i] for i in range(11, 21)]
+	test_loader = DataLoader(torch.tensor(loader[1], device=device, dtype=torch.float32), batch_size=loader[1].shape[0])
+	labels = loader[2]
 	return train_loader, test_loader, labels
 
 def save_model(model, optimizer, scheduler, epoch, accuracy_list):
@@ -271,7 +261,7 @@ def backprop(epoch, model, data, dataO, optimizer, scheduler, training = True):
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
 		dataset = TensorDataset(data, data)
-		bs = 256  # model.batch # if training else 1024  # len(data)
+		bs = 1024  # model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1
 		l1s, l2s = [], []
@@ -358,7 +348,7 @@ if __name__ == '__main__':
 	train_loader, test_loader, labels = load_dataset(args.dataset, device)
 	if args.model in ['MERLIN']:
 		eval(f'run_{args.model.lower()}(test_loader, labels, args.dataset)')
-	dims = labels.shape[1] if not args.multilabel_test else labels[0].shape[1]
+	dims = labels.shape[1]
 	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, dims, device=device)
 
 	## Prepare data
@@ -378,49 +368,44 @@ if __name__ == '__main__':
 		save_model(model, optimizer, scheduler, e, accuracy_list)
 		plot_accuracies(accuracy_list, f'{args.model}_{args.dataset}')
 
-	if not args.multilabel_test:
-		test_loader = [test_loader]
-		labels = [labels]
+	testD = next(iter(test_loader))
+	testO = testD
+	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
+		testD = convert_to_windows(testD, model, training=False)
 
-	for n in range(0, len(labels)):
-		testD = next(iter(test_loader[n]))
-		testO = testD
-		if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
-			testD = convert_to_windows(testD, model, training=False)
+	### Testing phase
+	torch.zero_grad = True
+	model.eval()
+	print(f'{color.HEADER}Testing {args.model} on {args.dataset}{color.ENDC}')
+	loss, y_pred = backprop(0, model, testD, testO, optimizer, scheduler, training=False)
 
-		### Testing phase
-		torch.zero_grad = True
-		model.eval()
-		print(f'{color.HEADER}Testing {args.model} on {args.dataset}{color.ENDC}')
-		loss, y_pred = backprop(0, model, testD, testO, optimizer, scheduler, training=False)
+	print('bp1')
+	### Plot curves
+	if args.plot or not args.test:
+		if 'TranAD' in model.name or 'Alladi' in model.name: testO = torch.roll(testO, 1, 0) 
+		plotter(f'{args.model}_{args.dataset}', testO.cpu(), y_pred, loss, labels)
 
-		print('bp1')
-		### Plot curves
-		if args.plot or not args.test:
-			if 'TranAD' in model.name or 'Alladi' in model.name: testO = torch.roll(testO, 1, 0) 
-			plotter(f'{args.model}_{args.dataset}', testO.cpu(), y_pred, loss, labels[n])
-
-		print('plotter')
-		### Scores
-		df = pd.DataFrame()
-		lossT, _ = backprop(0, model, trainD, trainO, optimizer, scheduler, training=False)
-		print('bp2')
-		for i in range(loss.shape[1]):
-			lt, l, ls = lossT[:, i], loss[:, i], labels[n][:, i]
-			result, pred = pot_eval(lt, l, ls); preds.append(pred)
-			# df = df.append(result, ignore_index=True)
-			df = pd.concat([df, pd.DataFrame([result])], ignore_index=True)
-		print('pot_eval')
-		# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
-		# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
-		lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
-		labelsFinal = (np.sum(labels[n], axis=1) >= 1) + 0
-		result, _ = pot_eval(lossTfinal, lossFinal, labelsFinal)
-		print('pot_eval2')
-		# result.update(hit_att(loss, labels[n]))
-		# result.update(ndcg(loss, labels[n]))
-		print('ndcg')
-		print(df)
-		pprint(result)
-		# pprint(getresults2(df, result))
-		# beep(4)
+	print('plotter')
+	### Scores
+	df = pd.DataFrame()
+	lossT, _ = backprop(0, model, trainD, trainO, optimizer, scheduler, training=False)
+	print('bp2')
+	for i in range(loss.shape[1]):
+		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
+		result, pred = pot_eval(lt, l, ls); preds.append(pred)
+		# df = df.append(result, ignore_index=True)
+		df = pd.concat([df, pd.DataFrame([result])], ignore_index=True)
+	print('pot_eval')
+	# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
+	# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
+	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
+	labelsFinal = np.mean(labels, axis=1)
+	result, _ = pot_eval(lossTfinal, lossFinal, labelsFinal, multi=args.multilabel_test)
+	print('pot_eval2')
+	# result.update(hit_att(loss, labels[n]))
+	# result.update(ndcg(loss, labels[n]))
+	print('ndcg')
+	print(df)
+	pprint(result)
+	# pprint(getresults2(df, result))
+	# beep(4)

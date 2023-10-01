@@ -495,7 +495,7 @@ class TranAD(nn.Module):
 		self.lr = lr
 		self.batch = 128
 		self.n_feats = feats
-		self.n_window = 20
+		self.n_window = 10
 		self.n_window_slide = 10
 		self.n_window_start = self.n_window
 		self.n = self.n_feats * self.n_window

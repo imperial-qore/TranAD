@@ -15,6 +15,7 @@ lm_d = {
 		'MBA': [(0.87, 1), (0.93, 1.04)],
 		'VeReMi': [(0.97, 1), (0.99995, 1)],
 		'VeReMi2': [(0.97, 1), (0.99, 1)],
+		'VeReMi3': [(0.97, 1), (0.99, 1)],
 	}
 lm = lm_d[args.dataset][1 if 'TranAD' in args.model else 0]
 
@@ -32,6 +33,7 @@ lr_d = {
 		'MBA': 0.001, 
 		'VeReMi': 0.001, 
 		'VeReMi2': 0.001, 
+		'VeReMi3': 0.001, 
 	}
 lr = lr_d[args.dataset]
 
@@ -49,6 +51,7 @@ percentiles = {
 		'MBA': (99, 2),
 		'VeReMi': (99, 2),
 		'VeReMi2': (99, 2),
+		'VeReMi3': (99, 2),
 	}
 percentile_merlin = percentiles[args.dataset][0]
 cvp = percentiles[args.dataset][1]

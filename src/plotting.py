@@ -21,7 +21,7 @@ def plotter(name, y_true, y_pred, ascore, labels):
 	os.makedirs(os.path.join('plots', name), exist_ok=True)
 	pdf = PdfPages(f'plots/{name}/output.pdf')
 	for dim in range(y_true.shape[1]):
-		y_t, y_p, l, a_s = y_true[:, dim], y_pred[:, dim], labels[:, dim], ascore[:, dim]
+		y_t, y_p, l, a_s = y_true[:, dim], y_pred[:, dim], np.where(labels[:, dim] > 0, 1, 0), ascore[:, dim]
 		fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 		ax1.set_ylabel('Value')
 		ax1.set_title(f'Dimension = {dim}')

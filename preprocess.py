@@ -1,3 +1,4 @@
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import os
 import sys
 import pandas as pd
@@ -7,7 +8,7 @@ import json
 from src.folderconstants import *
 from shutil import copyfile
 
-datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI', 'MSDS', 'UCR', 'MBA', 'NAB', 'VeReMi', 'VeReMi2']
+datasets = ['synthetic', 'SMD', 'SWaT', 'SMAP', 'MSL', 'WADI', 'MSDS', 'UCR', 'MBA', 'NAB', 'VeReMi', 'VeReMi2', 'VeReMi3']
 
 wadi_drop = ['2_LS_001_AL', '2_LS_002_AL','2_P_001_STATUS','2_P_002_STATUS']
 
@@ -245,6 +246,46 @@ def load_data(dataset):
 		labels = np.delete(labels, range(6, 8), axis=1)
 		print(train.shape, test.shape, labels.shape)
 
+		for file in ['train', 'test', 'labels']:
+			np.save(os.path.join(folder, f'{file}.npy'), eval(file).astype('float64'))
+
+	elif dataset == 'VeReMi3':
+		dataset_folder = 'data/VeReMi3'
+		df_train = pd.read_feather(os.path.join(dataset_folder, f'train_full_genuine.feather')).head(5000000)
+		df_test = pd.read_feather(os.path.join(dataset_folder, f'test.feather'))[5000000:5500000]
+		fields = [
+			'snd_pos_x',
+			'snd_pos_y',
+			'snd_spd_x',
+			'snd_spd_y',
+			'snd_acl_x',
+			'snd_acl_y',
+			'snd_hed_x',
+			'snd_hed_y',
+			'rcv_pos_x',
+			'rcv_pos_y',
+			'rcv_spd_x',
+			'rcv_spd_y',
+			'rcv_acl_x',
+			'rcv_acl_y',
+			'rcv_hed_x',
+			'rcv_hed_y',
+			'delta_time',
+		]
+
+		train = df_train[fields].to_numpy()
+		test = df_test[fields].to_numpy()
+		_, min_a, max_a = normalize3(np.concatenate((train, test), axis=0))
+		train, _, _ = normalize3(train, min_a, max_a)
+		test, _, _ = normalize3(test, min_a, max_a)
+
+		labels = df_test['attack_type'].to_numpy()
+		labels = np.swapaxes(np.tile(labels, (test.shape[-1], 1)), 0, 1)
+
+		# labels = pd.read_csv(os.path.join(dataset_folder, f'labels_{attack_type}.csv'))
+		# labels = labels.values[:, 3:]
+		# labels = np.delete(labels, range(6, 8), axis=1)
+		print(train.shape, test.shape, labels.shape)
 		for file in ['train', 'test', 'labels']:
 			np.save(os.path.join(folder, f'{file}.npy'), eval(file).astype('float64'))
 
