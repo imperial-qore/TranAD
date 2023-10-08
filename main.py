@@ -10,12 +10,14 @@ from src.pot import *
 from src.utils import *
 from src.diagnosis import *
 from src.merlin import *
+import torch
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch.nn as nn
 from time import time
 from pprint import pprint
 import h5py
 # from beepy import beep
+
 
 class HDF5Dataset(Dataset):
     def __init__(self, h5_data):
@@ -25,7 +27,7 @@ class HDF5Dataset(Dataset):
         return len(self.h5_data)
 
     def __getitem__(self, idx):
-	data = torch.FloatTensor(self.h5_data[:, idx])
+        data = torch.FloatTensor(self.h5_data[:, idx])
         return data
 
 def convert_to_windows(data, model, training=True):

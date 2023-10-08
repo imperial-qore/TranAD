@@ -6,3 +6,4 @@ numpy
 SciencePlots
 scikit-learn
 xlrd==1.2.0
+h5py
