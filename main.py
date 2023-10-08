@@ -288,6 +288,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 		if args.dataset == 'VeReMiH5':
 			dataset = HDF5Dataset(data)
 		else:
+			data = data.permute(1, 0, 2)
 			dataset = TensorDataset(data, data)
 		bs = 10000  # model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
@@ -296,6 +297,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 		if training:
 			for d, _ in dataloader:
 				d = d.to(device)
+                # pack padded sequence
 				local_bs = d.shape[0]
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, local_bs, feats)
@@ -328,13 +330,18 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().cpu().numpy(), z.detach().cpu().numpy()[0]
 	elif 'Alladi' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		dataset = TensorDataset(data, data)
-		bs = 256  # model.batch # if training else 1024  # len(data)
+		if args.dataset == 'VeReMiH5':
+			dataset = HDF5Dataset(data)
+		else:
+			data = data.permute(1, 0, 2)
+			dataset = TensorDataset(data, data)
+		bs = 4096  # model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1
 		l1s, l2s = [], []
 		if training:
 			for d, _ in dataloader:
+				d = d.to(device)
 				local_bs = d.shape[0]
 				elem = d[:, -1, :].view(1, local_bs, feats)
 				z = model(d)
@@ -350,7 +357,8 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 		else:
 			losses = []
 			zs = []
-			for d, _ in dataloader:
+			for d, _ in tqdm(dataloader):
+				d = d.to(device)
 				local_bs = d.shape[0]
 				elem = d[:, -1, :].view(1, local_bs, feats)
 				z = model(d)
@@ -381,8 +389,7 @@ if __name__ == '__main__':
 
 	if args.model in ['MERLIN']:
 		eval(f'run_{args.model.lower()}(test_loader, labels, args.dataset)')
-	dims = labels.shape[1]
-	print(dims)
+	dims = test.shape[-1]
 	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, dims, device=exec_device)
 
 	## Prepare data
@@ -419,25 +426,25 @@ if __name__ == '__main__':
 
 	preds = []
 	for i in range(loss.shape[1]):
-		lt, l, ls = lossT[:, i], loss[:, i], labels[:, i]
+		lt, l, ls = lossT[:, i], loss[:, i], labels[:, 1]
 		result, pred = pot_eval(lt, l, ls)
 		preds.append(pred)
 		# df = df.append(result, ignore_index=True)
 		df = pd.concat([df, pd.DataFrame([result])], ignore_index=True)
+
+	# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
+	# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
+	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
+	labelsFinal = labels[:, 1]
+	result, predsFinal = pot_eval(lossTfinal, lossFinal, labelsFinal, multi=args.multilabel_test)
 
 	### Plot curves
 	if args.plot or not args.test:
 		if 'TranAD' in model.name or 'Alladi' in model.name:
 			testO = torch.roll(testO, 1, 0) 
 		preds = np.swapaxes(np.vstack(preds), 0, 1)
-		plotter(f'{args.model}_{args.dataset}', testO.detach(), y_pred, loss, labels, preds)
+		plotter(f'{args.model}_{args.dataset}', testO.detach(), y_pred, loss, labels, preds, lossFinal, predsFinal)
 
-	# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
-	# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
-	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
-	labelsFinal = np.mean(labels, axis=1)
-	result, _ = pot_eval(lossTfinal, lossFinal, labelsFinal, multi=args.multilabel_test)
-	print('pot_eval2')
 	# result.update(hit_att(loss, labels[n]))
 	# result.update(ndcg(loss, labels[n]))
 	print('ndcg')
