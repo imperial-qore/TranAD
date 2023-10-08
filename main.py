@@ -14,7 +14,19 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch.nn as nn
 from time import time
 from pprint import pprint
+import h5py
 # from beepy import beep
+
+class HDF5Dataset(Dataset):
+    def __init__(self, h5_data):
+        self.h5_data = h5_data
+
+    def __len__(self):
+        return len(self.h5_data)
+
+    def __getitem__(self, idx):
+	data = torch.FloatTensor(self.h5_data[:, idx])
+        return data
 
 def convert_to_windows(data, model, training=True):
 	windows = []
@@ -40,6 +52,14 @@ def load_dataset(dataset, device):
 	if not os.path.exists(folder):
 		raise Exception('Processed Data not found.')
 	loader = []
+
+	if dataset == 'VeReMiH5':
+		f = h5py.File(os.path.join(folder, 'veremi.h5'))
+		train = f['train']
+		test = f['test']
+		labels = f['labels']
+		return train, test, labels
+
 	for file in ['train', 'test', 'labels']:
 		if dataset == 'SMD': file = 'machine-1-1_' + file
 		if dataset == 'SMAP': file = 'P-1_' + file
@@ -263,7 +283,10 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		dataset = TensorDataset(data, data)
+		if args.dataset == 'VeReMiH5':
+			dataset = HDF5Dataset(data)
+		else:
+			dataset = TensorDataset(data, data)
 		bs = 10000  # model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1
@@ -357,11 +380,12 @@ if __name__ == '__main__':
 	if args.model in ['MERLIN']:
 		eval(f'run_{args.model.lower()}(test_loader, labels, args.dataset)')
 	dims = labels.shape[1]
+	print(dims)
 	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, dims, device=exec_device)
 
 	## Prepare data
-	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
-		train = convert_to_windows(train, model)
+	# if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name:
+	# 	train = convert_to_windows(train, model)
 
 	### Training phase
 	if not args.test:
@@ -378,8 +402,8 @@ if __name__ == '__main__':
 		del lr
 		gc.collect()
 
-	if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
-		test = convert_to_windows(test, model, training=False)
+	# if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
+	# 	test = convert_to_windows(test, model, training=False)
 
 	### Testing phase
 	torch.zero_grad = True
