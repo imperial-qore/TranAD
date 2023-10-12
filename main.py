@@ -47,7 +47,8 @@ def convert_to_windows(data, model, training=True):
 		else:
 			w = torch.cat([data[0].repeat(w_size-i, 1), data[0:i]])
 		windows.append(w if 'TranAD' in args.model or 'Attention' in args.model or 'Alladi' in args.model else w.view(-1))
-	return torch.stack(windows)
+	out = torch.stack(windows)
+	return out.permute(1, 0, 2)
 
 def load_dataset(dataset, device):
 	folder = os.path.join(output_folder, dataset)
@@ -385,7 +386,6 @@ if __name__ == '__main__':
 	exec_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 	cpu = torch.device("cpu")
 	train, test, labels = load_dataset(args.dataset, cpu)
-	testO = test.clone()
 
 	if args.model in ['MERLIN']:
 		eval(f'run_{args.model.lower()}(test_loader, labels, args.dataset)')
@@ -393,8 +393,8 @@ if __name__ == '__main__':
 	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, dims, device=exec_device)
 
 	## Prepare data
-	# if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name:
-	# 	train = convert_to_windows(train, model)
+	if args.dataset != 'VeReMi' and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name):
+		train = convert_to_windows(train, model)
 
 	### Training phase
 	if not args.test:
@@ -411,8 +411,8 @@ if __name__ == '__main__':
 		del lr
 		gc.collect()
 
-	# if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name: 
-	# 	test = convert_to_windows(test, model, training=False)
+	if args.dataset != 'VeReMi' and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name): 
+		test = convert_to_windows(test, model, training=False)
 
 	### Testing phase
 	torch.zero_grad = True
@@ -440,10 +440,8 @@ if __name__ == '__main__':
 
 	### Plot curves
 	if args.plot or not args.test:
-		if 'TranAD' in model.name or 'Alladi' in model.name:
-			testO = torch.roll(testO, 1, 0) 
 		preds = np.swapaxes(np.vstack(preds), 0, 1)
-		plotter(f'{args.model}_{args.dataset}', testO.detach(), y_pred, loss, labels, preds, lossFinal, predsFinal)
+		plotter(f'{args.model}_{args.dataset}', test.detach(), y_pred, loss, labels, preds, lossFinal, predsFinal)
 
 	# result.update(hit_att(loss, labels[n]))
 	# result.update(ndcg(loss, labels[n]))
