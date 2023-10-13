@@ -531,9 +531,9 @@ class AlladiCNNLSTM(nn.Module):
 		super(AlladiCNNLSTM, self).__init__()
 		self.name = 'AlladiCNNLSTM'
 		self.batch = 1024
-		self.lr = 0.002
+		self.lr = lr
 		self.n_feats = feats
-		self.n_window = 20
+		self.n_window = 10
 		self.n_window_slide = 1
 		self.n_window_start = self.n_window
 		self.n_hidden = 256

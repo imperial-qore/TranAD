@@ -2,6 +2,7 @@ import gc
 import pickle
 import os
 import pandas as pd
+import json
 from tqdm import tqdm
 from src.models import *
 from src.constants import *
@@ -92,10 +93,19 @@ def load_dataset(dataset, device):
 	labels = loader[2]
 	return train, test, labels
 
+def save_results(epoch, df, result):
+	folder = f'result_metrics/{args.model}_{args.dataset}/'
+	os.makedirs(folder, exist_ok=True)
+	file_path = f'{folder}/results-e{epoch}.txt'
+	with open(file_path, 'w+') as fp:
+		fp.writelines(str(df))
+		fp.write('\n')
+		pprint(result, stream=fp)
+
 def save_model(model, optimizer, scheduler, epoch, accuracy_list):
 	folder = f'checkpoints/{args.model}_{args.dataset}/'
 	os.makedirs(folder, exist_ok=True)
-	file_path = f'{folder}/model.ckpt'
+	file_path = f'{folder}/model-e{epoch}.ckpt'
 	torch.save({
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
@@ -418,58 +428,61 @@ if __name__ == '__main__':
 	if 'VeReMi' not in args.dataset and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name):
 		train = convert_to_windows(train, model)
 
-	### Training phase
-	if not args.test:
-		print(f'{color.HEADER}Training {args.model} on {args.dataset}{color.ENDC}')
-		num_epochs = 5; e = epoch + 1; start = time()
-		for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
-			lossT, lr = backprop(e, model, train, optimizer, scheduler, exec_device)
-			accuracy_list.append((lossT, lr))
-		print(color.BOLD+'Training time: '+"{:10.4f}".format(time()-start)+' s'+color.ENDC)
-		save_model(model, optimizer, scheduler, e, accuracy_list)
-		plot_accuracies(accuracy_list, f'{args.model}_{args.dataset}')
-		del accuracy_list
-		del lossT
-		del lr
-		gc.collect()
+	n_trainings = 5
+	for n_training in range(n_trainings):
+		### Training phase
+		if not args.test:
+			print(f'{color.HEADER}Training {args.model} on {args.dataset}{color.ENDC}')
+			num_epochs = 5; e = epoch + 1; start = time()
+			for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
+				lossT, lr = backprop(e, model, train, optimizer, scheduler, exec_device)
+				accuracy_list.append((lossT, lr))
+			print(color.BOLD+'Training time: '+"{:10.4f}".format(time()-start)+' s'+color.ENDC)
+			save_model(model, optimizer, scheduler, e, accuracy_list)
+			plot_accuracies(accuracy_list, f'{args.model}_{args.dataset}')
+			del lossT
+			del lr
+			epoch += num_epochs
 
-	if 'VeReMi' not in args.dataset and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name): 
-		test = convert_to_windows(test, model, training=False)
+		if n_training == 0:
+			if 'VeReMi' not in args.dataset and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name): 
+				test = convert_to_windows(test, model, training=False)
 
-	### Testing phase
-	torch.zero_grad = True
-	model.eval()
-	print(f'{color.HEADER}Testing {args.model} on {args.dataset}{color.ENDC}')
-	loss, y_pred = backprop(0, model, test, optimizer, scheduler, exec_device, training=False)
+		### Testing phase
+		torch.zero_grad = True
+		model.eval()
+		print(f'{color.HEADER}Testing {args.model} on {args.dataset}{color.ENDC}')
+		loss, y_pred = backprop(0, model, test, optimizer, scheduler, exec_device, training=False)
 
-	### Scores
-	df = pd.DataFrame()
-	lossT, _ = backprop(0, model, train, optimizer, scheduler, exec_device, training=False)
+		### Scores
+		df = pd.DataFrame()
+		lossT, _ = backprop(0, model, train, optimizer, scheduler, exec_device, training=False)
 
-	preds = []
-	for i in range(loss.shape[1]):
-		lt, l, ls = lossT[:, i], loss[:, i], labels if len(labels.shape) == 1 else labels[:, i]
-		result, pred = pot_eval(lt, l, ls)
-		preds.append(pred)
-		# df = df.append(result, ignore_index=True)
-		df = pd.concat([df, pd.DataFrame([result])], ignore_index=True)
+		preds = []
+		for i in range(loss.shape[1]):
+			lt, l, ls = lossT[:, i], loss[:, i], labels if len(labels.shape) == 1 else labels[:, i]
+			result, pred = pot_eval(lt, l, ls)
+			preds.append(pred)
+			# df = df.append(result, ignore_index=True)
+			df = pd.concat([df, pd.DataFrame([result])], ignore_index=True)
 
-	# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
-	# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
-	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
-	labelsFinal = labels if len(labels.shape) == 1 else ((np.sum(labels, axis=1) >= 1) + 0)
+		# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
+		# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
+		lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
+		labelsFinal = labels if len(labels.shape) == 1 else ((np.sum(labels, axis=1) >= 1) + 0)
 
-	result, predsFinal = pot_eval(lossTfinal, lossFinal, labelsFinal, multi=args.multilabel_test)
+		result, predsFinal = pot_eval(lossTfinal, lossFinal, labelsFinal, multi=args.multilabel_test)
 
-	### Plot curves
-	if args.plot or not args.test:
-		preds = np.swapaxes(np.vstack(preds), 0, 1)
-		plotter(f'{args.model}_{args.dataset}', test, y_pred, loss, labels, preds, lossFinal, predsFinal)
+		### Plot curves
+		if args.plot or not args.test:
+			preds = np.swapaxes(np.vstack(preds), 0, 1)
+			plotter(f'{args.model}_{args.dataset}', test, y_pred, loss, labels, preds, lossFinal, predsFinal)
 
-	# result.update(hit_att(loss, labels[n]))
-	# result.update(ndcg(loss, labels[n]))
-	print('ndcg')
-	print(df)
-	pprint(result)
-	# pprint(getresults2(df, result))
-	# beep(4)
+		# result.update(hit_att(loss, labels[n]))
+		# result.update(ndcg(loss, labels[n]))
+		print('ndcg')
+		print(df)
+		pprint(result)
+		save_results(epoch, df, result)	
+		# pprint(getresults2(df, result))
+		# beep(4)

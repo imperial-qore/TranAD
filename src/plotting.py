@@ -44,7 +44,6 @@ def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_fin
 	for dim in range(y_true.shape[2]):
 		labelsF = labels if len(labels.shape) == 1 else labels[:, dim]
 		y_t, y_p, l, a_s, p = y_true[-1, :700, dim], y_pred[:700, dim], np.where(labelsF[:700] > 0, 1, 0), ascore[:700, dim], preds[:700, dim]
-		print(y_t)
 		title = f'Dimension = {dim}'
 		plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0)
 	a_s, p = ascore_final[:700], preds_final[:700]
