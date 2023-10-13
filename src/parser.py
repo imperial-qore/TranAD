@@ -30,4 +30,8 @@ parser.add_argument('--multilabel-test',
 parser.add_argument('--plot', 
 					action='store_true', 
 					help="force plotting")
+
+parser.add_argument('--parallel', 
+					action='store_true', 
+					help="parallel model")
 args = parser.parse_args()

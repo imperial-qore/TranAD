@@ -493,7 +493,7 @@ class TranAD(nn.Module):
 		super(TranAD, self).__init__()
 		self.name = 'TranAD'
 		self.lr = lr
-		self.batch = 128
+		self.batch = 1024
 		self.n_feats = feats
 		self.n_window = 20
 		self.n_window_start = self.n_window
@@ -530,6 +530,7 @@ class AlladiCNNLSTM(nn.Module):
 	def __init__(self, feats, full_window_pred=False):
 		super(AlladiCNNLSTM, self).__init__()
 		self.name = 'AlladiCNNLSTM'
+		self.batch = 1024
 		self.lr = 0.002
 		self.n_feats = feats
 		self.n_window = 20

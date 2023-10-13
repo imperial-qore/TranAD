@@ -45,7 +45,7 @@ def adjust_predicts(score, label,
         np.ndarray: predict labels
     """
     if len(score) != len(label):
-        raise ValueError(f"score ({len(score)}) and label ({len(score)}) must have the same length")
+        raise ValueError(f"score ({len(score)}) and label ({len(label)}) must have the same length")
     score = np.asarray(score)
     label = np.asarray(label)
     latency = 0

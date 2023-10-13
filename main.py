@@ -20,15 +20,30 @@ import h5py
 
 
 class HDF5Dataset(Dataset):
-    def __init__(self, h5_data):
+    def __init__(self, h5_data, chunk_size=1000, device='cpu'):
         self.h5_data = h5_data
+        self.device = device
+        self.chunk_size = chunk_size
+        self.chunk_start = -1
+        self.chunk_end = 0
+        self.chunk(0)
+        
+    def chunk(self, idx):
+        if  idx < self.chunk_start or idx >= self.chunk_end:
+            self.chunk_start = (idx // self.chunk_size) * self.chunk_size
+            self.chunk_end = self.chunk_start + self.chunk_size
+            chunk = self.h5_data[:, self.chunk_start:self.chunk_end]
+            self._chunk = torch.from_numpy(chunk).float().to(self.device)
+        bounded_idx = idx - self.chunk_start
+        return self._chunk, bounded_idx
 
     def __len__(self):
-        return len(self.h5_data)
+        return self.h5_data.shape[1]
 
     def __getitem__(self, idx):
-        data = torch.FloatTensor(self.h5_data[:, idx])
-        return data
+        chunk, bounded_idx = self.chunk(idx)
+        data = chunk[:, bounded_idx]
+        return data, data
 
 def convert_to_windows(data, model, training=True):
 	windows = []
@@ -58,9 +73,9 @@ def load_dataset(dataset, device):
 
 	if dataset == 'VeReMiH5':
 		f = h5py.File(os.path.join(folder, 'veremi.h5'))
-		train = f['train']
+		train = f['train_full_genuine']
 		test = f['test']
-		labels = f['labels']
+		labels = f['test_labels'][:len(f['test_labels'])]
 		return train, test, labels
 
 	for file in ['train', 'test', 'labels']:
@@ -88,7 +103,7 @@ def save_model(model, optimizer, scheduler, epoch, accuracy_list):
         'scheduler_state_dict': scheduler.state_dict(),
         'accuracy_list': accuracy_list}, file_path)
 
-def load_model(modelname, dims, device=None):
+def load_model(modelname, dims, device=None, parallel=False):
 	import src.models
 	model_class = getattr(src.models, modelname)
 	model = model_class(dims) #  .double()
@@ -96,6 +111,11 @@ def load_model(modelname, dims, device=None):
 	optimizer = torch.optim.AdamW(model.parameters() , lr=model.lr, weight_decay=1e-5)
 	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.9)
 	fname = f'checkpoints/{args.model}_{args.dataset}/model.ckpt'
+	if parallel:
+		p_model = nn.DataParallel(model)
+		p_model.name = model.name
+		p_model.batch = model.batch
+		model = p_model
 	if os.path.exists(fname) and (not args.retrain or args.test):
 		print(f"{color.GREEN}Loading pre-trained model: {model.name}{color.ENDC}")
 		checkpoint = torch.load(fname)
@@ -286,17 +306,17 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
+		bs = model.batch if training else 10000
 		if args.dataset == 'VeReMiH5':
-			dataset = HDF5Dataset(data)
+			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device)
 		else:
 			data = data.permute(1, 0, 2)
 			dataset = TensorDataset(data, data)
-		bs = 10000  # model.batch # if training else 1024  # len(data)
-		dataloader = DataLoader(dataset, batch_size = bs)
+		dataloader = DataLoader(dataset, batch_size=bs)
 		n = epoch + 1
 		l1s, l2s = [], []
 		if training:
-			for d, _ in dataloader:
+			for d, _ in tqdm(dataloader):
 				d = d.to(device)
                 # pack padded sequence
 				local_bs = d.shape[0]
@@ -331,12 +351,12 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().cpu().numpy(), z.detach().cpu().numpy()[0]
 	elif 'Alladi' in model.name:
 		l = nn.MSELoss(reduction = 'none')
+		bs = model.batch if training else 10000
 		if args.dataset == 'VeReMiH5':
 			dataset = HDF5Dataset(data)
 		else:
 			data = data.permute(1, 0, 2)
 			dataset = TensorDataset(data, data)
-		bs = 4096  # model.batch # if training else 1024  # len(data)
 		dataloader = DataLoader(dataset, batch_size = bs)
 		n = epoch + 1
 		l1s, l2s = [], []
@@ -383,17 +403,17 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().cpu().numpy(), y_pred.detach().cpu().numpy()
 
 if __name__ == '__main__':
-	exec_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+	exec_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	cpu = torch.device("cpu")
 	train, test, labels = load_dataset(args.dataset, cpu)
 
 	if args.model in ['MERLIN']:
 		eval(f'run_{args.model.lower()}(test_loader, labels, args.dataset)')
 	dims = test.shape[-1]
-	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, dims, device=exec_device)
+	model, optimizer, scheduler, epoch, accuracy_list = load_model(args.model, dims, device=exec_device, parallel=args.parallel)
 
 	## Prepare data
-	if args.dataset != 'VeReMi' and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name):
+	if 'VeReMi' not in args.dataset and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name):
 		train = convert_to_windows(train, model)
 
 	### Training phase
@@ -411,7 +431,7 @@ if __name__ == '__main__':
 		del lr
 		gc.collect()
 
-	if args.dataset != 'VeReMi' and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name): 
+	if 'VeReMi' not in args.dataset and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name): 
 		test = convert_to_windows(test, model, training=False)
 
 	### Testing phase
@@ -440,7 +460,7 @@ if __name__ == '__main__':
 	### Plot curves
 	if args.plot or not args.test:
 		preds = np.swapaxes(np.vstack(preds), 0, 1)
-		plotter(f'{args.model}_{args.dataset}', test.detach(), y_pred, loss, labels, preds, lossFinal, predsFinal)
+		plotter(f'{args.model}_{args.dataset}', test, y_pred, loss, labels, preds, lossFinal, predsFinal)
 
 	# result.update(hit_att(loss, labels[n]))
 	# result.update(ndcg(loss, labels[n]))
