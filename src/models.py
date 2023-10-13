@@ -495,17 +495,17 @@ class TranAD(nn.Module):
 		self.lr = lr
 		self.batch = 1024
 		self.n_feats = feats
-		self.n_window = 20
+		self.n_window = 10
 		self.n_window_start = self.n_window
-		self.n_window_slide = 10 
+		self.n_window_slide = 1
 
 
 		self.pos_encoder = PositionalEncoding(2 * feats, 0.1, self.n_window)
-		encoder_layers = TransformerEncoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=16, dropout=0.1)
+		encoder_layers = TransformerEncoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=512, dropout=0.1)
 		self.transformer_encoder = TransformerEncoder(encoder_layers, 1)
-		decoder_layers1 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=16, dropout=0.1)
+		decoder_layers1 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=512, dropout=0.1)
 		self.transformer_decoder1 = TransformerDecoder(decoder_layers1, 1)
-		decoder_layers2 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=16, dropout=0.1)
+		decoder_layers2 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=512, dropout=0.1)
 		self.transformer_decoder2 = TransformerDecoder(decoder_layers2, 1)
 		self.fcn = nn.Sequential(nn.Linear(2 * feats, feats), nn.Sigmoid())
 
@@ -527,20 +527,17 @@ class TranAD(nn.Module):
 		return x1, x2
 
 class AlladiCNNLSTM(nn.Module):
-	def __init__(self, feats, full_window_pred=False):
+	def __init__(self, feats):
 		super(AlladiCNNLSTM, self).__init__()
 		self.name = 'AlladiCNNLSTM'
 		self.batch = 1024
 		self.lr = 0.002
 		self.n_feats = feats
 		self.n_window = 20
-		self.n_window_slide = 10
+		self.n_window_slide = 1
 		self.n_window_start = self.n_window
 		self.n_hidden = 256
 		self.n_layers = 4
-		self.full_window_pred = full_window_pred
-
-		self.n_out_window = 1 if not full_window_pred else self.n_window
 
 		# Define the CNN layers
 		self.cnn = nn.Sequential(
@@ -549,23 +546,21 @@ class AlladiCNNLSTM(nn.Module):
 		)
 
 		# Define the LSTM layers
-		self.lstm = nn.LSTM(18, self.n_hidden, self.n_layers, batch_first=True)
+		self.lstm = nn.LSTM(self.n_window - 2, self.n_hidden, self.n_layers, batch_first=True)
 
 		# Fully connected layer
-		self.fc = nn.Linear(self.n_hidden, self.n_out_window * self.n_feats)
+		self.fc = nn.Sequential(nn.Linear(self.n_window * self.n_hidden, self.n_feats), nn.Sigmoid())
 
 	def forward(self, src):
 		# Forward pass through CNN
-		src = src.permute(0, 2, 1)
+		src = src.permute(1, 2, 0)
 		src = self.cnn(src)
 
 		# Forward pass through LSTM
 		out, _ = self.lstm(src)
 
+		out = out.reshape(-1, out.shape[1] * out.shape[2])
 		# Decode the hidden state of the last time step
 		out = self.fc(out)
 
-		if not self.full_window_pred:
-			out = out[:, -1].unsqueeze(0)
-
-		return out
+		return out.unsqueeze(0)

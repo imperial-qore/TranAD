@@ -361,12 +361,13 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 		n = epoch + 1
 		l1s, l2s = [], []
 		if training:
-			for d, _ in dataloader:
+			for d, _ in tqdm(dataloader):
 				d = d.to(device)
 				local_bs = d.shape[0]
-				elem = d[:, -1, :].view(1, local_bs, feats)
-				z = model(d)
-				l1 = l(z, elem) if not isinstance(z, tuple) else (1 / n) * l(z[0], elem) + (1 - 1/n) * l(z[1], elem)
+				window = d.permute(1, 0, 2)
+				elem = window[-1, :, :].view(1, local_bs, feats)
+				z = model(window)
+				l1 = l(z, elem)
 				l1s.append(torch.mean(l1).item())
 				loss = torch.mean(l1)
 				optimizer.zero_grad()
@@ -381,8 +382,9 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			for d, _ in tqdm(dataloader):
 				d = d.to(device)
 				local_bs = d.shape[0]
-				elem = d[:, -1, :].view(1, local_bs, feats)
-				z = model(d)
+				window = d.permute(1, 0, 2)
+				elem = window[-1, :, :].view(1, local_bs, feats)
+				z = model(window)
 				loss = l(z, elem)[0]
 				zs.append(z.detach())
 				losses.append(loss.detach())	
@@ -446,7 +448,7 @@ if __name__ == '__main__':
 
 	preds = []
 	for i in range(loss.shape[1]):
-		lt, l, ls = lossT[:, i], loss[:, i], labels
+		lt, l, ls = lossT[:, i], loss[:, i], labels if len(labels.shape) == 1 else labels[:, i]
 		result, pred = pot_eval(lt, l, ls)
 		preds.append(pred)
 		# df = df.append(result, ignore_index=True)
@@ -455,7 +457,9 @@ if __name__ == '__main__':
 	# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
 	# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
 	lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
-	result, predsFinal = pot_eval(lossTfinal, lossFinal, labels, multi=args.multilabel_test)
+	labelsFinal = labels if len(labels.shape) == 1 else ((np.sum(labels, axis=1) >= 1) + 0)
+
+	result, predsFinal = pot_eval(lossTfinal, lossFinal, labelsFinal, multi=args.multilabel_test)
 
 	### Plot curves
 	if args.plot or not args.test:
