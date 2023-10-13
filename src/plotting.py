@@ -42,7 +42,7 @@ def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_fin
 	os.makedirs(os.path.join('plots', name), exist_ok=True)
 	pdf = PdfPages(f'plots/{name}/output.pdf')
 	for dim in range(y_true.shape[2]):
-		y_t, y_p, l, a_s, p = y_true[-1, -1000:-700, dim], y_pred[-1000:-700, dim], np.where(labels[-1000:-700, 1] > 0, 1, 0), ascore[-1000:-700, dim], preds[-1000:-700, dim]
+		y_t, y_p, l, a_s, p = y_true[-1, -1000:-700, dim], y_pred[-1000:-700, dim], np.where(labels[-1000:-700] > 0, 1, 0), ascore[-1000:-700, dim], preds[-1000:-700, dim]
 		title = f'Dimension = {dim}'
 		plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0)
 	a_s, p = ascore_final[-1000:-700], preds_final[-1000:-700]
