@@ -493,7 +493,7 @@ class TranAD(nn.Module):
 		super(TranAD, self).__init__()
 		self.name = 'TranAD'
 		self.lr = lr
-		self.batch = 1024
+		self.batch = 10000 # 1024
 		self.n_feats = feats
 		self.n_window = 10
 		self.n_window_start = self.n_window
@@ -501,11 +501,11 @@ class TranAD(nn.Module):
 
 
 		self.pos_encoder = PositionalEncoding(2 * feats, 0.1, self.n_window)
-		encoder_layers = TransformerEncoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=512, dropout=0.1)
+		encoder_layers = TransformerEncoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=128, dropout=0.1)
 		self.transformer_encoder = TransformerEncoder(encoder_layers, 1)
-		decoder_layers1 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=512, dropout=0.1)
+		decoder_layers1 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=128, dropout=0.1)
 		self.transformer_decoder1 = TransformerDecoder(decoder_layers1, 1)
-		decoder_layers2 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=512, dropout=0.1)
+		decoder_layers2 = TransformerDecoderLayer(d_model=2 * feats, nhead=feats, dim_feedforward=128, dropout=0.1)
 		self.transformer_decoder2 = TransformerDecoder(decoder_layers2, 1)
 		self.fcn = nn.Sequential(nn.Linear(2 * feats, feats), nn.Sigmoid())
 
@@ -530,7 +530,7 @@ class AlladiCNNLSTM(nn.Module):
 	def __init__(self, feats):
 		super(AlladiCNNLSTM, self).__init__()
 		self.name = 'AlladiCNNLSTM'
-		self.batch = 1024
+		self.batch = # 1024
 		self.lr = lr
 		self.n_feats = feats
 		self.n_window = 10
@@ -549,7 +549,8 @@ class AlladiCNNLSTM(nn.Module):
 		self.lstm = nn.LSTM(self.n_window - 2, self.n_hidden, self.n_layers, batch_first=True)
 
 		# Fully connected layer
-		self.fc = nn.Sequential(nn.Linear(self.n_window * self.n_hidden, self.n_feats), nn.Sigmoid())
+        # self.fc = nn.Sequential(nn.Linear(20 * self.n_hidden, self.n_feats), nn.Sigmoid())
+		self.fc = nn.Sequential(nn.Linear(self.n_hidden, self.n_feats), nn.Sigmoid())
 
 	def forward(self, src):
 		# Forward pass through CNN
@@ -559,7 +560,8 @@ class AlladiCNNLSTM(nn.Module):
 		# Forward pass through LSTM
 		out, _ = self.lstm(src)
 
-		out = out.reshape(-1, out.shape[1] * out.shape[2])
+        # out = out.reshape(-1, out.shape[1] * out.shape[2])
+		out = out[:, -1]
 		# Decode the hidden state of the last time step
 		out = self.fc(out)
 
