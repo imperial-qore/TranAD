@@ -422,7 +422,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().cpu().numpy(), y_pred.detach().cpu().numpy()
 
 if __name__ == '__main__':
-	exec_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+	exec_device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 	cpu = torch.device("cpu")
 	train, test, labels = load_dataset(args.dataset, cpu)
 
@@ -435,7 +435,7 @@ if __name__ == '__main__':
 	if 'VeReMi' not in args.dataset and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name):
 		train = convert_to_windows(train, model)
 
-	n_trainings = 5 if not args.test else 1
+	n_trainings = args.n_train if not args.test else 1
 	for n_training in range(n_trainings):
 		### Training phase
 		if not args.test:

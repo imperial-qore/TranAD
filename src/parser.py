@@ -34,4 +34,13 @@ parser.add_argument('--plot',
 parser.add_argument('--parallel', 
 					action='store_true', 
 					help="parallel model")
+
+parser.add_argument('--device', 
+					type=str,
+					default='cuda',
+					help="the device to train the models")
+parser.add_argument('--n-train', 
+					type=int,
+					default=5,
+					help="number of trainament runs (each runs for 5 epochs)")
 args = parser.parse_args()
