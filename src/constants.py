@@ -31,7 +31,7 @@ lr_d = {
 		'NAB': 0.009, 
 		'MBA': 0.001, 
 		'VeReMi': 0.001, 
-		'VeReMiH5': 0.001, 
+		'VeReMiH5': 0.0001,
 	}
 lr = lr_d[args.dataset]
 
