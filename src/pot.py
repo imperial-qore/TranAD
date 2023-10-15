@@ -133,6 +133,10 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02, multi=False):
     Returns:
         dict: pot result dict
     """
+    if multi:
+        label_main_attack = label[:, 1]
+        label = label_multi[:, 0]
+
     lms = lm[0]
     while True:
         try:
@@ -168,12 +172,12 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02, multi=False):
     }
 
     if multi:
-        label_types = np.unique(label)
+        label_types = np.unique(label_main_attack)
         for lb in label_types:
             if lb == 0:
                 mask = np.ones_like(label, dtype=bool)
             else:
-                mask = np.isin(label, [0, lb])
+                mask = label_main_attack == lb
             pred_only_curr_lb = pred[mask]
             if lb == 0:
                 cond = label[mask] == 0

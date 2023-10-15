@@ -467,7 +467,7 @@ if __name__ == '__main__':
 
 		preds = []
 		for i in range(loss.shape[1]):
-			lt, l, ls = lossT[:, i], loss[:, i], labels if len(labels.shape) == 1 else labels[:, i]
+			lt, l, ls = lossT[:, i], loss[:, i], labels[:, 0] if 'VeReMi' in args.dataset else labels[:, i]
 			result, pred = pot_eval(lt, l, ls)
 			preds.append(pred)
 			# df = df.append(result, ignore_index=True)
@@ -476,14 +476,20 @@ if __name__ == '__main__':
 		# preds = np.concatenate([i.reshape(-1, 1) + 0 for i in preds], axis=1)
 		# pd.DataFrame(preds, columns=[str(i) for i in range(10)]).to_csv('labels.csv')
 		lossTfinal, lossFinal = np.mean(lossT, axis=1), np.mean(loss, axis=1)
-		labelsFinal = labels if len(labels.shape) == 1 else ((np.sum(labels, axis=1) >= 1) + 0)
+		if 'VeReMi' in args.dataset:
+			if args.multilabel_test:
+				labelsFinal = labels
+			else:
+				labelsFinal = labels[:, 0]
+		else:
+			labelsFinal = (np.sum(labels, axis=1) >= 1) + 0
 
 		result, predsFinal = pot_eval(lossTfinal, lossFinal, labelsFinal, multi=args.multilabel_test)
 
 		### Plot curves
 		if args.plot or not args.test:
 			preds = np.swapaxes(np.vstack(preds), 0, 1)
-			plotter(f'{args.model}_{args.dataset}', test, y_pred, loss, labels, preds, lossFinal, predsFinal)
+			plotter(f'{args.model}_{args.dataset}', test, y_pred, loss, labels, preds, lossFinal, predsFinal, is_veremi='VeReMi' in args.dataset)
 
 		# result.update(hit_att(loss, labels[n]))
 		# result.update(ndcg(loss, labels[n]))

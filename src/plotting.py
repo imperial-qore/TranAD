@@ -37,12 +37,12 @@ def plot_curve(y_t, y_p, l, a_s, p, pdf, title, final=False, first=False):
     pdf.savefig(fig)
     plt.close()
 
-def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_final):
+def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_final, is_veremi=False):
     # if 'TranAD' in name or 'Alladi' in name: y_true = torch.roll(y_true, 1, 0)
 	os.makedirs(os.path.join('plots', name), exist_ok=True)
 	pdf = PdfPages(f'plots/{name}/output.pdf')
 	for dim in range(y_true.shape[2]):
-		labelsF = labels if len(labels.shape) == 1 else labels[:, dim]
+		labelsF = labels if is_veremi else labels[:, dim]
 		y_t, y_p, l, a_s, p = y_true[-1, :700, dim], y_pred[:700, dim], np.where(labelsF[:700] > 0, 1, 0), ascore[:700, dim], preds[:700, dim]
 		title = f'Dimension = {dim}'
 		plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0)
