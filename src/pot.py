@@ -135,7 +135,7 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02, multi=False):
     """
     if multi:
         label_main_attack = label[:, 1]
-        label = label_multi[:, 0]
+        label = label[:, 0]
 
     lms = lm[0]
     while True:

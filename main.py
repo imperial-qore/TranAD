@@ -435,7 +435,7 @@ if __name__ == '__main__':
 	if 'VeReMi' not in args.dataset and (model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN', 'AlladiCNNLSTM'] or 'TranAD' in model.name):
 		train = convert_to_windows(train, model)
 
-	n_trainings = 5
+	n_trainings = 5 if not args.test else 1
 	for n_training in range(n_trainings):
 		### Training phase
 		if not args.test:
@@ -466,7 +466,7 @@ if __name__ == '__main__':
 		lossT, _ = backprop(0, model, train, optimizer, scheduler, exec_device, training=False)
 
 		preds = []
-		for i in range(loss.shape[1]):
+		for i in tqdm(range(loss.shape[1])):
 			lt, l, ls = lossT[:, i], loss[:, i], labels[:, 0] if 'VeReMi' in args.dataset else labels[:, i]
 			result, pred = pot_eval(lt, l, ls)
 			preds.append(pred)
