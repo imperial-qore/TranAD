@@ -76,7 +76,7 @@ def load_dataset(dataset, device):
 		f = h5py.File(os.path.join(folder, 'veremi.h5'))
 		train = f['train_full_genuine']
 		test = f['test']
-		labels = f['test_labels'][:len(f['test_labels'])]
+		labels = f['test_labels'][:]
 		return train, test, labels
 
 	for file in ['train', 'test', 'labels']:
@@ -120,7 +120,14 @@ def load_model(modelname, dims, device=None, parallel=False):
 	model.to(device)
 	optimizer = torch.optim.AdamW(model.parameters() , lr=model.lr, weight_decay=1e-5)
 	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.9)
-	fname = f'checkpoints/{args.model}_{args.dataset}/model.ckpt'
+	folder = f'checkpoints/{args.model}_{args.dataset}/'
+	files = os.listdir(folder)
+	if files:
+		files.sort(key=lambda x: os.path.getmtime(folder + x))
+		most_recent_checkpoint = files[-1]
+		fname = folder + most_recent_checkpoint
+	else:
+		fname = folder + 'model.ckpt'
 	if parallel:
 		p_model = nn.DataParallel(model)
 		p_model.name = model.name
@@ -316,7 +323,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		bs = model.batch if training else 10000
+		bs = model.batch if training else 20000
 		if args.dataset == 'VeReMiH5':
 			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device)
 		else:

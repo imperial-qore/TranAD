@@ -530,7 +530,7 @@ class AlladiCNNLSTM(nn.Module):
 	def __init__(self, feats):
 		super(AlladiCNNLSTM, self).__init__()
 		self.name = 'AlladiCNNLSTM'
-		self.batch = # 1024
+		self.batch = 1024
 		self.lr = lr
 		self.n_feats = feats
 		self.n_window = 10
