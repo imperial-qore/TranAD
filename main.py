@@ -147,6 +147,8 @@ def load_model(modelname, dims, device=None, parallel=False):
 	return model, optimizer, scheduler, epoch, accuracy_list
 
 def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
+	if training:
+		model.train(True)
 	l = nn.MSELoss(reduction = 'mean' if training else 'none')
 	feats = data.shape[-1]
 	if 'DAGMM' in model.name:

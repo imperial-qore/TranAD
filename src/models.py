@@ -546,7 +546,7 @@ class AlladiCNNLSTM(nn.Module):
 		)
 
 		# Define the LSTM layers
-		self.lstm = nn.LSTM(self.n_window - 2, self.n_hidden, self.n_layers, batch_first=True)
+		self.lstm = nn.LSTM(20, self.n_hidden, self.n_layers, batch_first=True)
 
 		# Fully connected layer
         # self.fc = nn.Sequential(nn.Linear(20 * self.n_hidden, self.n_feats), nn.Sigmoid())
@@ -556,6 +556,7 @@ class AlladiCNNLSTM(nn.Module):
 		# Forward pass through CNN
 		src = src.permute(1, 2, 0)
 		src = self.cnn(src)
+		src = src.permute(0, 2, 1)
 
 		# Forward pass through LSTM
 		out, _ = self.lstm(src)
