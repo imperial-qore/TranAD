@@ -540,10 +540,7 @@ class AlladiCNNLSTM(nn.Module):
 		self.n_layers = 4
 
 		# Define the CNN layers
-		self.cnn = nn.Sequential(
-			nn.Conv1d(feats, 20, kernel_size=3),
-			nn.ReLU(),
-		)
+		self.cnn = nn.Conv1d(feats, 20, kernel_size=3)
 
 		# Define the LSTM layers
 		self.lstm = nn.LSTM(20, self.n_hidden, self.n_layers, batch_first=True)
