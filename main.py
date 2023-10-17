@@ -74,11 +74,16 @@ def load_dataset(dataset, device):
 		raise Exception('Processed Data not found.')
 	loader = []
 
-	if dataset == 'VeReMiH5':
+	if 'VeReMiH5' in dataset:
 		f = h5py.File(os.path.join(folder, 'veremi.h5'))
-		train = f['train_full_genuine']
 		test = f['test']
 		labels = f['test_labels'][:]
+		if '95' in dataset:
+			train = f['train_95_genuine']
+		elif '90' in dataset:
+			train = f['train_90_genuine']
+		else:
+			train = f['train_full_genuine']
 		return train, test, labels
 
 	for file in ['train', 'test', 'labels']:
