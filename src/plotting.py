@@ -43,9 +43,9 @@ def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_fin
 	pdf = PdfPages(f'plots/{name}/output.pdf')
 	for dim in range(y_true.shape[2]):
 		labelsF = labels[:, 1] if is_veremi else labels[:, dim]
-		y_t, y_p, l, a_s, p = y_true[-1, :-700:-300, dim], y_pred[:-700:-300, dim], np.where(labelsF[:-700:-300] > 0, 1, 0), ascore[:-700:-300, dim], preds[:-700:-300, dim]
+		y_t, y_p, l, a_s, p = y_true[-1, -700:-300, dim], y_pred[-700:-300, dim], np.where(labelsF[-700:-300] > 0, 1, 0), ascore[-700:-300, dim], preds[-700:-300, dim]
 		title = f'Dimension = {dim}'
 		plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0)
-	a_s, p = ascore_final[:-700:-300], preds_final[:-700:-300]
+	a_s, p = ascore_final[-700:-300], preds_final[-700:-300]
 	plot_curve(None, None, l, a_s, p, pdf, title="All dimensions", final=True)
 	pdf.close()
