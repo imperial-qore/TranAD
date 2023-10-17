@@ -22,9 +22,9 @@ import h5py
 
 class HDF5Dataset(Dataset):
     def __init__(self, h5_data, chunk_size=1000, device='cpu', less=False):
-	if less:
-		self.h5_data = cut_array(0.2, h5_data)
         self.h5_data = h5_data
+        if less:
+            self.h5_data = cut_array(0.2, h5_data)
         self.device = device
         self.chunk_size = chunk_size
         self.chunk_start = -1
