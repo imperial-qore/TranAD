@@ -493,11 +493,11 @@ class TranAD(nn.Module):
 		super(TranAD, self).__init__()
 		self.name = 'TranAD'
 		self.lr = lr
-		self.batch = 10000 # 1024
+		self.batch = 2048
 		self.n_feats = feats
-		self.n_window = 10
+		self.n_window = 20
 		self.n_window_start = self.n_window
-		self.n_window_slide = 1
+		self.n_window_slide = 10
 
 
 		self.pos_encoder = PositionalEncoding(2 * feats, 0.1, self.n_window)
@@ -530,11 +530,11 @@ class AlladiCNNLSTM(nn.Module):
 	def __init__(self, feats):
 		super(AlladiCNNLSTM, self).__init__()
 		self.name = 'AlladiCNNLSTM'
-		self.batch = 1024
+		self.batch = 2048
 		self.lr = lr
 		self.n_feats = feats
-		self.n_window = 10
-		self.n_window_slide = 1
+		self.n_window = 20
+		self.n_window_slide = 10
 		self.n_window_start = self.n_window
 		self.n_hidden = 256
 		self.n_layers = 4

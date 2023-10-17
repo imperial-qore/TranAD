@@ -21,7 +21,9 @@ import h5py
 
 
 class HDF5Dataset(Dataset):
-    def __init__(self, h5_data, chunk_size=1000, device='cpu'):
+    def __init__(self, h5_data, chunk_size=1000, device='cpu', less=False):
+	if less:
+		self.h5_data = cut_array(0.2, h5_data)
         self.h5_data = h5_data
         self.device = device
         self.chunk_size = chunk_size
@@ -325,9 +327,9 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		bs = model.batch if training else 20000
+		bs = model.batch if training else 10000
 		if args.dataset == 'VeReMiH5':
-			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device)
+			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device, less=args.less and training)
 		else:
 			data = data.permute(1, 0, 2)
 			dataset = TensorDataset(data, data)
@@ -372,7 +374,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 		l = nn.MSELoss(reduction = 'none')
 		bs = model.batch if training else 10000
 		if args.dataset == 'VeReMiH5':
-			dataset = HDF5Dataset(data)
+			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device, less=args.less and training)
 		else:
 			data = data.permute(1, 0, 2)
 			dataset = TensorDataset(data, data)
