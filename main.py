@@ -128,7 +128,7 @@ def load_model(modelname, dims, device=None, parallel=False):
 	optimizer = torch.optim.AdamW(model.parameters() , lr=model.lr, weight_decay=1e-5)
 	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.9)
 	folder = f'checkpoints/{args.model}_{args.dataset}/'
-	files = os.listdir(folder)
+	files = os.listdir(folder) if os.path.exists(folder) else None
 	if files:
 		files.sort(key=lambda x: os.path.getmtime(folder + x))
 		most_recent_checkpoint = files[-1]
