@@ -24,7 +24,7 @@ class HDF5Dataset(Dataset):
     def __init__(self, h5_data, chunk_size=1000, device='cpu', less=False):
         self.h5_data = h5_data
         if less:
-            self.h5_data = cut_array(0.2, h5_data)
+            self.h5_data = cut_array_window_first(0.2, self.h5_data)
         self.device = device
         self.chunk_size = chunk_size
         self.chunk_start = -1

@@ -32,6 +32,12 @@ def cut_array(percentage, arr):
 	window = round(arr.shape[0] * percentage * 0.5)
 	return arr[mid - window : mid + window, :]
 
+def cut_array_window_first(percentage, arr):
+	print(f'{color.BOLD}Slicing dataset to {int(percentage*100)}%{color.ENDC}')
+	mid = round(arr.shape[1] / 2)
+	window = round(arr.shape[1] * percentage * 0.5)
+	return arr[:, mid - window : mid + window, :]
+
 def getresults2(df, result):
 	results2, df1, df2 = {}, df.sum(), df.mean()
 	for a in ['FN', 'FP', 'TP', 'TN']:
