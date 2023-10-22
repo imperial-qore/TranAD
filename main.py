@@ -11,6 +11,7 @@ from src.pot import *
 from src.utils import *
 from src.diagnosis import *
 from src.merlin import *
+from sklearn.metrics import accuracy_score
 import torch
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch.nn as nn
@@ -142,7 +143,7 @@ def load_model(modelname, dims, device=None, parallel=False):
 		model = p_model
 	if os.path.exists(fname) and (not args.retrain or args.test):
 		print(f"{color.GREEN}Loading pre-trained model: {model.name}{color.ENDC}")
-		checkpoint = torch.load(fname)
+		checkpoint = torch.load(fname, map_location=device)
 		model.load_state_dict(checkpoint['model_state_dict'])
 		optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 		scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
@@ -332,7 +333,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		bs = model.batch if training else 10000
+		bs = model.batch if training else 3000
 		if 'VeReMiH5' in args.dataset:
 			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device, less=args.less and training)
 		else:
@@ -498,7 +499,7 @@ if __name__ == '__main__':
 		### Plot curves
 		if args.plot or not args.test:
 			preds = np.swapaxes(np.vstack(preds), 0, 1)
-			plotter(f'{args.model}_{args.dataset}', test, y_pred, loss, labels, preds, lossFinal, predsFinal, is_veremi='VeReMi' in args.dataset)
+			plotter(f'{args.model}_{args.dataset}', test, y_pred, loss, labels, preds, lossFinal, predsFinal, thresh=result['threshold'], is_veremi='VeReMi' in args.dataset)
 
 		# result.update(hit_att(loss, labels[n]))
 		# result.update(ndcg(loss, labels[n]))

@@ -16,7 +16,7 @@ def smooth(y, box_pts=1):
     y_smooth = np.convolve(y, box, mode='same')
     return y_smooth
 
-def plot_curve(y_t, y_p, l, a_s, p, pdf, title, final=False, first=False):
+def plot_curve(y_t, y_p, l, a_s, p, pdf, title, final=False, first=False, thresh=None):
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
     ax1.set_ylabel('Value')
     ax1.set_title(title)
@@ -32,20 +32,21 @@ def plot_curve(y_t, y_p, l, a_s, p, pdf, title, final=False, first=False):
     ax4.fill_between(np.arange(p.shape[0]), p, color='red', alpha=0.3)
     if first: ax1.legend(ncol=2, bbox_to_anchor=(0.6, 1.02))
     ax2.plot(smooth(a_s), linewidth=0.2, color='g')
+    ax2.axhline(y=thresh, color='r', linestyle='--', label='Threshold')
     ax2.set_xlabel('Timestamp')
     ax2.set_ylabel('Anomaly Score')
     pdf.savefig(fig)
     plt.close()
 
-def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_final, is_veremi=False):
+def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_final, thresh, is_veremi=False):
     # if 'TranAD' in name or 'Alladi' in name: y_true = torch.roll(y_true, 1, 0)
 	os.makedirs(os.path.join('plots', name), exist_ok=True)
 	pdf = PdfPages(f'plots/{name}/output.pdf')
 	for dim in range(y_true.shape[2]):
-		labelsF = labels[:, 1] if is_veremi else labels[:, dim]
-		y_t, y_p, l, a_s, p = y_true[-1, -700:-300, dim], y_pred[-700:-300, dim], np.where(labelsF[-700:-300] > 0, 1, 0), ascore[-700:-300, dim], preds[-700:-300, dim]
+		labelsF = labels[:, 0] if is_veremi else labels[:, dim]
+		y_t, y_p, l, a_s, p = y_true[-1, 1741000:1742000, dim], y_pred[1741000:1742000, dim], np.where(labelsF[1741000:1742000] > 0, 1, 0), ascore[1741000:1742000, dim], preds[1741000:1742000, dim]
 		title = f'Dimension = {dim}'
-		plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0)
-	a_s, p = ascore_final[-700:-300], preds_final[-700:-300]
-	plot_curve(None, None, l, a_s, p, pdf, title="All dimensions", final=True)
+		plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0, thresh=thresh)
+	a_s, p = ascore_final[1741000:1742000], preds_final[1741000:1742000]
+	plot_curve(None, None, l, a_s, p, pdf, title="All dimensions", final=True, thresh=thresh)
 	pdf.close()
