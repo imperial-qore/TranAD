@@ -38,15 +38,16 @@ def plot_curve(y_t, y_p, l, a_s, p, pdf, title, final=False, first=False, thresh
     pdf.savefig(fig)
     plt.close()
 
-def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_final, thresh, is_veremi=False):
+def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_final, thresh, thresh_final, is_veremi=False):
     # if 'TranAD' in name or 'Alladi' in name: y_true = torch.roll(y_true, 1, 0)
 	os.makedirs(os.path.join('plots', name), exist_ok=True)
 	pdf = PdfPages(f'plots/{name}/output.pdf')
 	for dim in range(y_true.shape[2]):
+		curr_thresh = thresh[dim]
 		labelsF = labels[:, 0] if is_veremi else labels[:, dim]
 		y_t, y_p, l, a_s, p = y_true[-1, 1741000:1742000, dim], y_pred[1741000:1742000, dim], np.where(labelsF[1741000:1742000] > 0, 1, 0), ascore[1741000:1742000, dim], preds[1741000:1742000, dim]
 		title = f'Dimension = {dim}'
-		plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0, thresh=thresh)
+		plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0, thresh=curr_thresh)
 	a_s, p = ascore_final[1741000:1742000], preds_final[1741000:1742000]
-	plot_curve(None, None, l, a_s, p, pdf, title="All dimensions", final=True, thresh=thresh)
+	plot_curve(None, None, l, a_s, p, pdf, title="All dimensions", final=True, thresh=thresh_final)
 	pdf.close()

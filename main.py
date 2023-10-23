@@ -476,9 +476,11 @@ if __name__ == '__main__':
 		lossT, _ = backprop(0, model, train, optimizer, scheduler, exec_device, training=False)
 
 		preds = []
+		threshs = []
 		for i in tqdm(range(loss.shape[1])):
 			lt, l, ls = lossT[:, i], loss[:, i], labels[:, 0] if 'VeReMi' in args.dataset else labels[:, i]
 			result, pred = pot_eval(lt, l, ls)
+			threshs.append(result['threshold'])
 			preds.append(pred)
 			# df = df.append(result, ignore_index=True)
 			df = pd.concat([df, pd.DataFrame([result])], ignore_index=True)
@@ -499,7 +501,7 @@ if __name__ == '__main__':
 		### Plot curves
 		if args.plot or not args.test:
 			preds = np.swapaxes(np.vstack(preds), 0, 1)
-			plotter(f'{args.model}_{args.dataset}', test, y_pred, loss, labels, preds, lossFinal, predsFinal, thresh=result['threshold'], is_veremi='VeReMi' in args.dataset)
+			plotter(f'{args.model}_{args.dataset}', test, y_pred, loss, labels, preds, lossFinal, predsFinal, thresh=threshs, thresh_final=result['threshold'], is_veremi='VeReMi' in args.dataset)
 
 		# result.update(hit_att(loss, labels[n]))
 		# result.update(ndcg(loss, labels[n]))
