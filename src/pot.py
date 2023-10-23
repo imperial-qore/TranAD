@@ -31,7 +31,8 @@ def calc_point2point(predict, actual):
 def adjust_predicts(score, label,
                     threshold=None,
                     pred=None,
-                    calc_latency=False):
+                    calc_latency=False,
+                    label_seq=None):
     """
     Calculate adjusted predict labels using given `score`, `threshold` (or given `pred`) and `label`.
     Args:
@@ -61,7 +62,7 @@ def adjust_predicts(score, label,
             anomaly_state = True
             anomaly_count += 1
             for j in range(i, 0, -1):
-                if not actual[j] or label[j] != label[i]:
+                if not actual[j] or label[j] != label[i] or (label_seq is not None and label_seq[i] != label_seq[j]):
                     break
                 else:
                     if not predict[j]:
@@ -133,8 +134,10 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02, multi=False):
     Returns:
         dict: pot result dict
     """
+    label_seq = None
     if multi:
         label_main_attack = label[:, 1]
+        label_seq = label[:, 2]
         label = label[:, 0]
 
     lms = lm[0]
@@ -151,7 +154,7 @@ def pot_eval(init_score, score, label, q=1e-5, level=0.02, multi=False):
     pot_th = np.mean(ret['thresholds']) * lm[1]
     # pot_th = np.percentile(score, 100 * lm[0])
     # np.percentile(score, 100 * lm[0])
-    pred, p_latency = adjust_predicts(score, label, pot_th, calc_latency=True)
+    pred, p_latency = adjust_predicts(score, label, pot_th, calc_latency=True, label_seq=label_seq)
     # DEBUG - np.save(f'{debug}.npy', np.array(pred))
     # DEBUG - print(np.argwhere(np.array(pred)))
 
