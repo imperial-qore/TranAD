@@ -37,6 +37,8 @@ class HDF5Dataset(Dataset):
             self.chunk_start = (idx // self.chunk_size) * self.chunk_size
             self.chunk_end = self.chunk_start + self.chunk_size
             chunk = self.h5_data[:, self.chunk_start:self.chunk_end]
+            if hasattr(self, '_chunk'):
+                del self._chunk
             self._chunk = torch.from_numpy(chunk).float().to(self.device)
         bounded_idx = idx - self.chunk_start
         return self._chunk, bounded_idx
@@ -333,7 +335,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		bs = model.batch if training else 3000
+		bs = model.batch if training else 10000
 		if 'VeReMiH5' in args.dataset:
 			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device, less=args.less and training)
 		else:
@@ -413,8 +415,8 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 				elem = window[-1, :, :].view(1, local_bs, feats)
 				z = model(window)
 				loss = l(z, elem)[0]
-				zs.append(z.detach())
-				losses.append(loss.detach())	
+				zs.append(z.cpu().detach())
+				losses.append(loss.cpu().detach())
 			loss = torch.cat(losses, 0)
 			z = torch.cat(zs, 1)
 			return loss.detach().cpu().numpy(), z.detach().cpu().numpy()[0]
