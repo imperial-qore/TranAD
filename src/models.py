@@ -495,9 +495,9 @@ class TranAD(nn.Module):
 		self.lr = lr
 		self.batch = 2048
 		self.n_feats = feats
-		self.n_window = 20
+		self.n_window = 10
 		self.n_window_start = self.n_window
-		self.n_window_slide = 10
+		self.n_window_slide = 1
 
 
 		self.pos_encoder = PositionalEncoding(2 * feats, 0.1, self.n_window)
@@ -521,10 +521,11 @@ class TranAD(nn.Module):
 		# Phase 1 - Without anomaly scores
 		c = torch.zeros_like(src)
 		x1 = self.fcn(self.transformer_decoder1(*self.encode(src, c, tgt)))
+		x12 = self.fcn(self.transformer_decoder2(*self.encode(src, c, tgt)))
 		# Phase 2 - With anomaly scores
 		c = (x1 - src) ** 2
 		x2 = self.fcn(self.transformer_decoder2(*self.encode(src, c, tgt)))
-		return x1, x2
+		return x1, x2, x12
 
 class AlladiCNNLSTM(nn.Module):
 	def __init__(self, feats):
@@ -533,8 +534,8 @@ class AlladiCNNLSTM(nn.Module):
 		self.batch = 2048
 		self.lr = lr
 		self.n_feats = feats
-		self.n_window = 20
-		self.n_window_slide = 10
+		self.n_window = 10
+		self.n_window_slide = 1
 		self.n_window_start = self.n_window
 		self.n_hidden = 256
 		self.n_layers = 4

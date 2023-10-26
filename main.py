@@ -156,7 +156,7 @@ def load_model(modelname, dims, device=None, parallel=False):
 		epoch = -1; accuracy_list = []
 	return model, optimizer, scheduler, epoch, accuracy_list
 
-def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
+def backprop(epoch, model, data, optimizer, scheduler, device, training = True, training_data = False):
 	if training:
 		model.train(True)
 	l = nn.MSELoss(reduction = 'mean' if training else 'none')
@@ -337,7 +337,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 		l = nn.MSELoss(reduction = 'none')
 		bs = model.batch if training else 10000
 		if 'VeReMiH5' in args.dataset:
-			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device, less=args.less and training)
+			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device, less=args.less and training_data)
 		else:
 			data = data.permute(1, 0, 2)
 			dataset = TensorDataset(data, data)
@@ -352,7 +352,10 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True):
 				window = d.permute(1, 0, 2)
 				elem = window[-1, :, :].view(1, local_bs, feats)
 				z = model(window, elem)
-				l1 = l(z, elem) if not isinstance(z, tuple) else (1 / n) * l(z[0], elem) + (1 - 1/n) * l(z[1], elem)
+				# old loss
+				# l1 = l(z, elem) if not isinstance(z, tuple) else (1 / n) * l(z[0], elem) + (1 - 1/n) * l(z[1], elem)
+				l1 = l(z, elem) if not isinstance(z, tuple) else (0.9 ** n) * l(z[0], elem) + (1 - 0.9 ** n) * l(z[1], elem)
+				l1 += 0 if not isinstance(z, tuple) or len(z) < 3 else  (0.9 ** n) * l(z[2], elem) - (1 - 0.9 ** n) * l(z[1], elem)
 				if isinstance(z, tuple): z = z[1]
 				l1s.append(torch.mean(l1).item())
 				loss = torch.mean(l1)
@@ -454,7 +457,7 @@ if __name__ == '__main__':
 			print(f'{color.HEADER}Training {args.model} on {args.dataset}{color.ENDC}')
 			num_epochs = 5; e = epoch + 1; start = time()
 			for e in tqdm(list(range(epoch+1, epoch+num_epochs+1))):
-				lossT, lr = backprop(e, model, train, optimizer, scheduler, exec_device)
+				lossT, lr = backprop(e, model, train, optimizer, scheduler, exec_device, training_data=True)
 				accuracy_list.append((lossT, lr))
 			print(color.BOLD+'Training time: '+"{:10.4f}".format(time()-start)+' s'+color.ENDC)
 			save_model(model, optimizer, scheduler, e, accuracy_list)
@@ -471,11 +474,11 @@ if __name__ == '__main__':
 		torch.zero_grad = True
 		model.eval()
 		print(f'{color.HEADER}Testing {args.model} on {args.dataset}{color.ENDC}')
-		loss, y_pred = backprop(0, model, test, optimizer, scheduler, exec_device, training=False)
+		loss, y_pred = backprop(0, model, test, optimizer, scheduler, exec_device, training=False, training_data=False)
 
 		### Scores
 		df = pd.DataFrame()
-		lossT, _ = backprop(0, model, train, optimizer, scheduler, exec_device, training=False)
+		lossT, _ = backprop(0, model, train, optimizer, scheduler, exec_device, training=False, training_data=True)
 
 		preds = []
 		threshs = []
