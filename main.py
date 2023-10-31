@@ -335,7 +335,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True, 
 			return loss.detach().numpy(), y_pred.detach().numpy()
 	elif 'TranAD' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		bs = model.batch if training else 10000
+		bs = model.batch if training else 5000
 		if 'VeReMiH5' in args.dataset:
 			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device, less=args.less and training_data)
 		else:
@@ -383,7 +383,7 @@ def backprop(epoch, model, data, optimizer, scheduler, device, training = True, 
 			return loss.detach().cpu().numpy(), z.detach().cpu().numpy()[0]
 	elif 'Alladi' in model.name:
 		l = nn.MSELoss(reduction = 'none')
-		bs = model.batch if training else 10000
+		bs = model.batch if training else 5000
 		if 'VeReMiH5' in args.dataset:
 			dataset = HDF5Dataset(data, chunk_size=bs*100, device=device, less=args.less and training)
 		else:

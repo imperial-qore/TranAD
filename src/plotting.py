@@ -44,10 +44,16 @@ def plotter(name, y_true, y_pred, ascore, labels, preds, ascore_final, preds_fin
 	pdf = PdfPages(f'plots/{name}/output.pdf')
 	for dim in range(y_true.shape[2]):
 		curr_thresh = thresh[dim]
+	#	labelsF = labels[:200, 0] if is_veremi else labels[:200, dim]
+	#	y_t, y_p, l, a_s, p = y_true[-1, :200, dim], y_pred[:200, dim], np.where(labelsF[:200] > 0, 1, 0), ascore[:200, dim], preds[:200, dim]
+	#	title = f'Dimension = {dim}'
+	#	plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0, thresh=curr_thresh)
+	#a_s, p = ascore_final[:200], preds_final[:200]
 		labelsF = labels[:, 0] if is_veremi else labels[:, dim]
-		y_t, y_p, l, a_s, p = y_true[-1, 1741000:1742000, dim], y_pred[1741000:1742000, dim], np.where(labelsF[1741000:1742000] > 0, 1, 0), ascore[1741000:1742000, dim], preds[1741000:1742000, dim]
+		y_t, y_p, l, a_s, p = y_true[-1, :, dim], y_pred[:, dim], np.where(labelsF[:] > 0, 1, 0), ascore[:, dim], preds[:, dim]
 		title = f'Dimension = {dim}'
 		plot_curve(y_t, y_p, l, a_s, p, pdf, title, first=dim == 0, thresh=curr_thresh)
-	a_s, p = ascore_final[1741000:1742000], preds_final[1741000:1742000]
+	a_s, p = ascore_final[:], preds_final[:]
 	plot_curve(None, None, l, a_s, p, pdf, title="All dimensions", final=True, thresh=thresh_final)
 	pdf.close()
+	
